@@ -1,0 +1,86 @@
+[
+  {
+    "id": "contributing",
+    "title": "Contributing to Rocket.Chat",
+    "url": "https://developer.rocket.chat/docs/contribute-to-rocketchat",
+    "tags": ["open-source", "contributing", "onboarding"],
+    "snippet": "How to set up your dev environment and submit your first PR."
+  },
+  {
+    "id": "apps-engine",
+    "title": "Apps-Engine Overview",
+    "url": "https://developer.rocket.chat/docs/apps-engine",
+    "tags": ["apps-engine", "extensions", "typescript"],
+    "snippet": "Build and ship Rocket.Chat apps with the Apps-Engine SDK."
+  },
+  {
+    "id": "rest-api",
+    "title": "REST API Reference",
+    "url": "https://developer.rocket.chat/reference/api/rest-api",
+    "tags": ["api", "rest", "integration"],
+    "snippet": "HTTP endpoints for rooms, users, messages, and admin operations."
+  },
+  {
+    "id": "realtime-api",
+    "title": "Realtime API (DDP/WebSocket)",
+    "url": "https://developer.rocket.chat/docs/realtime-api",
+    "tags": ["websocket", "ddp", "realtime"],
+    "snippet": "Subscribe to live message and room events over WebSocket."
+  },
+  {
+    "id": "omnichannel",
+    "title": "Omnichannel Architecture",
+    "url": "https://docs.rocket.chat/docs/omnichannel",
+    "tags": ["omnichannel", "livechat", "agents"],
+    "snippet": "Queues, routing, and agent workflows for customer messaging."
+  },
+  {
+    "id": "authentication",
+    "title": "Authentication & OAuth",
+    "url": "https://developer.rocket.chat/docs/authentication",
+    "tags": ["auth", "oauth", "security"],
+    "snippet": "Login flows, tokens, and SSO integration patterns."
+  },
+  {
+    "id": "ui-kit",
+    "title": "UIKit Blocks",
+    "url": "https://developer.rocket.chat/docs/uikit",
+    "tags": ["ui", "blocks", "interactive"],
+    "snippet": "Interactive message surfaces inside channels and DMs."
+  },
+  {
+    "id": "testing",
+    "title": "Testing Guide",
+    "url": "https://developer.rocket.chat/docs/testing",
+    "tags": ["test", "e2e", "quality"],
+    "snippet": "Unit, integration, and end-to-end testing conventions."
+  },
+  {
+    "id": "performance",
+    "title": "Performance Tuning",
+    "url": "https://docs.rocket.chat/docs/performance",
+    "tags": ["performance", "scaling", "mongodb"],
+    "snippet": "Indexing, caching, and scaling tips for large workspaces."
+  },
+  {
+    "id": "i18n",
+    "title": "Internationalization (i18n)",
+    "url": "https://developer.rocket.chat/docs/internationalization",
+    "tags": ["i18n", "localization", "translations"],
+    "snippet": "Adding and updating translation strings across the monorepo."
+  },
+  {
+    "id": "microservices",
+    "title": "Microservices Mode",
+    "url": "https://docs.rocket.chat/docs/microservices",
+    "tags": ["microservices", "deployment", "architecture"],
+    "snippet": "Splitting services for high-availability deployments."
+  },
+  {
+    "id": "slash-commands",
+    "title": "Slash Commands",
+    "url": "https://developer.rocket.chat/docs/slash-commands",
+    "tags": ["commands", "chat", "feature"],
+    "snippet": "Register custom /commands for users and bots."
+  }
+]

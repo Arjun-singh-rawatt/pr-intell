@@ -1,0 +1,1061 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>PR Intel — Contributor Feed</title>
+<!-- This static HTML page is now the primary feed entry for the frontend build. -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:           #0d0d0d;
+    --sidebar-bg:   #111111;
+    --card-bg:      #1a1a1a;
+    --ai-box-bg:    #141414;
+    --surface:      #1e1e1e;
+    --border:       rgba(255,255,255,0.07);
+    --border-hover: rgba(255,255,255,0.12);
+
+    --text-primary:   #f0f0f0;
+    --text-secondary: #888888;
+    --text-muted:     #555555;
+
+    --accent-green:  #049809;
+    --accent-purple: #d70bc9;
+    --accent-blue:   #1925b1;
+    --accent-amber:  #f0883e;
+
+    --badge-merged-bg:   rgba(63,185,80,0.12);
+    --badge-merged-fg:   #3fb950;
+    --badge-beginner-bg: rgba(139,92,246,0.15);
+    --badge-beginner-fg: #a78bfa;
+    --badge-feature-bg:  rgba(240,136,62,0.15);
+    --badge-feature-fg:  #f0883e;
+    --badge-docs-bg:     rgba(88,166,255,0.12);
+    --badge-docs-fg:     #58a6ff;
+
+    --add-color: #3fb950;
+    --del-color: #f85149;
+
+    --font: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 14px;
+
+    --sidebar-w: 240px;
+  }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text-primary);
+    font-family: var(--font);
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  .app {
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  /* ─── SIDEBAR ─────────────────────────────────────── */
+  .sidebar {
+    width: var(--sidebar-w);
+    min-width: var(--sidebar-w);
+    background: var(--sidebar-bg);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .sidebar-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 18px 16px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .logo-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #3b82f6 0%, #6366f1 50%, #8b5cf6 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .logo-icon svg { width: 18px; height: 18px; color: #fff; }
+
+  .sidebar-brand { display: flex; flex-direction: column; }
+  .brand-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    letter-spacing: -0.2px;
+  }
+  .brand-sub {
+    font-size: 11.5px;
+    color: var(--text-secondary);
+    font-weight: 400;
+  }
+
+  .sidebar-nav {
+    flex: 1;
+    padding: 10px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 7px 10px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    color: var(--text-secondary);
+    font-size: 13.5px;
+    font-weight: 450;
+    transition: background 0.12s, color 0.12s;
+    user-select: none;
+  }
+  .nav-item:hover { background: rgba(255,255,255,0.04); color: var(--text-primary); }
+  .nav-item.active {
+    background: rgba(255,255,255,0.07);
+    color: var(--text-primary);
+    font-weight: 500;
+  }
+  .nav-item svg { width: 16px; height: 16px; flex-shrink: 0; opacity: 0.85; }
+
+  .sidebar-footer {
+    padding: 12px 16px 16px;
+    border-top: 1px solid var(--border);
+  }
+
+  .ai-providers-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .ai-status-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+  .ai-status-dot.healthy { background: var(--accent-green); box-shadow: 0 0 4px rgba(63,185,80,0.6); }
+  .ai-status-dot.degraded { background: #e3b341; }
+
+  .provider-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 0;
+  }
+  .provider-left { display: flex; align-items: center; gap: 7px; font-size: 12.5px; color: var(--text-secondary); }
+  .provider-val { font-size: 12px; color: var(--text-secondary); }
+  .provider-val.degraded { color: #e3b341; font-weight: 500; }
+
+  .user-row {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border);
+  }
+  .user-avatar {
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 600; color: #fff;
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+  .user-avatar img { width: 100%; height: 100%; object-fit: cover; }
+  .user-name { font-size: 13px; font-weight: 500; color: var(--text-primary); line-height: 1.2; }
+  .user-role { font-size: 11.5px; color: var(--text-secondary); }
+
+  /* ─── MAIN ─────────────────────────────────────────── */
+  .main {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .main::-webkit-scrollbar { width: 6px; }
+  .main::-webkit-scrollbar-track { background: transparent; }
+  .main::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 3px; }
+
+  .topbar {
+    padding: 22px 28px 0;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+
+  .page-title {
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: -0.5px;
+    line-height: 1.2;
+  }
+  .page-subtitle {
+    font-size: 13.5px;
+    color: var(--text-secondary);
+    margin-top: 3px;
+    font-weight: 400;
+  }
+
+  .topbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-top: 4px;
+  }
+
+  .search-bar {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 7px 12px;
+    width: 240px;
+    cursor: text;
+    transition: border-color 0.15s;
+  }
+  .search-bar:hover { border-color: var(--border-hover); }
+  .search-bar svg { width: 14px; height: 14px; color: var(--text-muted); flex-shrink: 0; }
+  .search-bar input {
+    background: none;
+    border: none;
+    outline: none;
+    color: var(--text-primary);
+    font-size: 13px;
+    font-family: var(--font);
+    width: 100%;
+  }
+  .search-bar input::placeholder { color: var(--text-muted); }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 13px;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    font-weight: 500;
+    font-family: var(--font);
+    cursor: pointer;
+    transition: background 0.12s, border-color 0.12s;
+    white-space: nowrap;
+    border: 1px solid transparent;
+  }
+  .btn svg { width: 14px; height: 14px; }
+
+  .btn-ghost {
+    background: var(--surface);
+    border-color: var(--border);
+    color: var(--text-secondary);
+  }
+  .btn-ghost:hover { background: rgba(255,255,255,0.07); border-color: var(--border-hover); color: var(--text-primary); }
+
+  .btn-primary {
+    background: var(--text-primary);
+    color: #0d0d0d;
+    border-color: transparent;
+    font-weight: 600;
+  }
+  .btn-primary:hover { background: #e0e0e0; }
+
+  /* ─── STATS ─────────────────────────────────────────── */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    padding: 20px 28px;
+  }
+
+  .stat-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 16px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .stat-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12.5px;
+    color: var(--text-secondary);
+    font-weight: 450;
+  }
+  .stat-icon {
+    width: 18px; height: 18px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .stat-icon svg { width: 15px; height: 15px; }
+
+  .stat-value {
+    font-size: 30px;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: -1px;
+    line-height: 1;
+    margin-top: 2px;
+  }
+
+  .stat-meta {
+    font-size: 12px;
+    color: var(--text-secondary);
+    font-weight: 400;
+  }
+  .stat-meta.positive { color: var(--accent-green); }
+
+  /* ─── FILTER TABS ───────────────────────────────────── */
+  .filter-tabs {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0 28px;
+    margin-bottom: 16px;
+  }
+
+  .tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 99px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    color: var(--text-secondary);
+    transition: background 0.12s, color 0.12s;
+    white-space: nowrap;
+    border: none;
+    background: transparent;
+    font-family: var(--font);
+  }
+  .tab:hover { color: var(--text-primary); background: rgba(255,255,255,0.05); }
+  .tab.active {
+    background: var(--text-primary);
+    color: #0d0d0d;
+  }
+  .tab svg { width: 13px; height: 13px; }
+
+  /* ─── PR CARDS ──────────────────────────────────────── */
+  .feed {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 0 28px 32px;
+  }
+
+  .pr-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    transition: border-color 0.15s;
+  }
+  .pr-card:hover { border-color: var(--border-hover); }
+
+  .pr-card-header {
+    padding: 16px 18px 0;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .pr-author-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .author-avatar {
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 600; color: #fff;
+    flex-shrink: 0;
+    position: relative;
+    overflow: hidden;
+  }
+  .author-avatar-img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+
+  .avatar-badge {
+    position: absolute;
+    bottom: -2px; right: -2px;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--card-bg);
+    border: 1.5px solid var(--card-bg);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .avatar-badge svg { width: 9px; height: 9px; }
+
+  .author-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .author-top {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  }
+  .author-name {
+    font-size: 13.5px; font-weight: 600; color: var(--text-primary);
+    white-space: nowrap;
+  }
+
+  .badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px 8px;
+    border-radius: 99px;
+    font-size: 11.5px; font-weight: 500;
+    white-space: nowrap;
+    border: 1px solid transparent;
+  }
+  .badge svg { width: 10px; height: 10px; }
+
+  .badge-merged {
+    background: var(--badge-merged-bg);
+    color: var(--badge-merged-fg);
+    border-color: rgba(63,185,80,0.2);
+  }
+  .badge-beginner {
+    background: var(--badge-beginner-bg);
+    color: var(--badge-beginner-fg);
+    border-color: rgba(167,139,250,0.2);
+  }
+  .badge-feature {
+    background: var(--badge-feature-bg);
+    color: var(--badge-feature-fg);
+    border-color: rgba(240,136,62,0.2);
+  }
+  .badge-docs {
+    background: var(--badge-docs-bg);
+    color: var(--badge-docs-fg);
+    border-color: rgba(88,166,255,0.2);
+  }
+
+  .pr-meta {
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+
+  .bookmark-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-muted);
+    padding: 4px;
+    border-radius: var(--radius-sm);
+    display: flex; align-items: center; justify-content: center;
+    transition: color 0.12s, background 0.12s;
+    flex-shrink: 0;
+    margin-top: -2px;
+  }
+  .bookmark-btn:hover { color: var(--text-secondary); background: rgba(255,255,255,0.05); }
+  .bookmark-btn svg { width: 16px; height: 16px; }
+
+  .pr-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-primary);
+    padding: 10px 18px 0;
+    letter-spacing: -0.2px;
+    line-height: 1.4;
+  }
+
+  /* AI Summary Box */
+  .ai-summary {
+    margin: 12px 18px;
+    background: var(--ai-box-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 14px 15px;
+  }
+
+  .ai-summary-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 9px;
+  }
+
+  .ai-summary-left {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+  .ai-summary-left svg { width: 14px; height: 14px; color: var(--accent-purple); }
+
+  .judge-score {
+    font-size: 12px;
+    color: var(--text-secondary);
+    font-weight: 400;
+  }
+
+  .ai-summary-text {
+    font-size: 13px;
+    color: #b0b0b0;
+    line-height: 1.6;
+    margin-bottom: 10px;
+  }
+
+  .context-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    flex-wrap: wrap;
+  }
+  .context-row svg { width: 13px; height: 13px; flex-shrink: 0; }
+  .context-link {
+    color: var(--accent-blue);
+    text-decoration: none;
+    font-weight: 450;
+    font-size: 12px;
+    transition: color 0.12s;
+  }
+  .context-link:hover { color: #7dc8ff; }
+
+  /* PR Card Footer */
+  .pr-card-footer {
+    padding: 12px 18px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    border-top: 1px solid var(--border);
+    margin-top: 0;
+  }
+
+  .pr-diff-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: var(--text-secondary);
+    font-size: 12.5px;
+  }
+
+  .diff-files {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    color: var(--text-secondary);
+  }
+  .diff-files svg { width: 13px; height: 13px; }
+
+  .diff-add {
+    color: var(--add-color);
+    font-weight: 500;
+    font-size: 13px;
+  }
+  .diff-del {
+    color: var(--del-color);
+    font-weight: 500;
+    font-size: 13px;
+  }
+
+  .pr-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .btn-reexplain {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: var(--radius-sm);
+    font-size: 12.5px;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: var(--font);
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    transition: background 0.12s, border-color 0.12s, color 0.12s;
+  }
+  .btn-reexplain:hover { background: rgba(255,255,255,0.05); border-color: var(--border-hover); color: var(--text-primary); }
+  .btn-reexplain svg { width: 13px; height: 13px; }
+
+  .btn-details {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 13px;
+    border-radius: var(--radius-sm);
+    font-size: 12.5px;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: var(--font);
+    background: var(--text-primary);
+    border: 1px solid transparent;
+    color: #0d0d0d;
+    transition: background 0.12s;
+  }
+  .btn-details:hover { background: #ddd; }
+  .btn-details svg { width: 13px; height: 13px; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ─── SIDEBAR ─── -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="logo-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="18" cy="18" r="3"/>
+          <circle cx="6" cy="6" r="3"/>
+          <path d="M13 6h3a2 2 0 0 1 2 2v7"/>
+          <line x1="6" y1="9" x2="6" y2="21"/>
+        </svg>
+      </div>
+      <div class="sidebar-brand">
+        <span class="brand-name">PR Intel</span>
+        <span class="brand-sub">Rocket.Chat</span>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-item active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+        </svg>
+        Feed
+      </div>
+      <div class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        Search
+      </div>
+      <div class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+        </svg>
+        Saved
+      </div>
+      <div class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/>
+          <path d="M22 12a10 10 0 0 1-20 0"/>
+        </svg>
+        Settings
+      </div>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="ai-providers-label">
+        AI Providers
+        <span style="color: var(--accent-green); font-size:11px; font-weight:500; text-transform:none; letter-spacing:0;">● Healthy</span>
+      </div>
+
+      <div class="provider-row">
+        <div class="provider-left">
+          <span class="ai-status-dot healthy"></span>
+          OpenAI
+        </div>
+        <span class="provider-val">42ms</span>
+      </div>
+      <div class="provider-row">
+        <div class="provider-left">
+          <span class="ai-status-dot healthy"></span>
+          Anthropic
+        </div>
+        <span class="provider-val">58ms</span>
+      </div>
+      <div class="provider-row">
+        <div class="provider-left">
+          <span class="ai-status-dot degraded"></span>
+          Gemini
+        </div>
+        <span class="provider-val degraded">degraded</span>
+      </div>
+
+      <div class="user-row">
+        <div class="user-avatar">AD</div>
+        <div>
+          <div class="user-name">Alex Doan</div>
+          <div class="user-role">CS Student</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ─── MAIN ─── -->
+  <main class="main">
+    <!-- Topbar -->
+    <div class="topbar">
+      <div>
+        <h1 class="page-title">Contributor Feed</h1>
+        <p class="page-subtitle">Merged pull requests, explained for humans.</p>
+      </div>
+      <div class="topbar-actions">
+        <div class="search-bar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <input type="text" placeholder="Search PRs, files, authors..." />
+        </div>
+        <button class="btn btn-ghost">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="20" y2="12"/><line x1="12" y1="18" x2="20" y2="18"/>
+          </svg>
+          Filters
+        </button>
+        <button class="btn btn-primary">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+          </svg>
+          Sync
+        </button>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-header">
+          <span class="stat-icon" style="color:var(--accent-green);">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/>
+              <path d="M13 6h3a2 2 0 0 1 2 2v7"/><line x1="6" y1="9" x2="6" y2="21"/>
+            </svg>
+          </span>
+          Merged this week
+        </div>
+        <div class="stat-value">128</div>
+        <div class="stat-meta positive">+18% vs last week</div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-header">
+          <span class="stat-icon" style="color:var(--accent-blue);">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+              <circle cx="9" cy="7" r="4"/>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+            </svg>
+          </span>
+          Active contributors
+        </div>
+        <div class="stat-value">37</div>
+        <div class="stat-meta">across 9 repos</div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-header">
+          <span class="stat-icon" style="color:var(--accent-purple);">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 3c-1 3-4 5-5 8s0 6 5 8c5-2 6-5 5-8-1-3-4-5-5-8z"/>
+              <path d="M12 3v18"/>
+              <path d="M5 12h14"/>
+            </svg>
+          </span>
+          AI explanations
+        </div>
+        <div class="stat-value">512</div>
+        <div class="stat-meta">judge avg 8.7/10</div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-header">
+          <span class="stat-icon" style="color:var(--accent-amber);">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <ellipse cx="12" cy="5" rx="9" ry="3"/>
+              <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/>
+              <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>
+            </svg>
+          </span>
+          KB documents
+        </div>
+        <div class="stat-value">2,140</div>
+        <div class="stat-meta">indexed for RAG</div>
+      </div>
+    </div>
+
+    <!-- Filter Tabs -->
+    <div class="filter-tabs">
+      <button class="tab active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+        </svg>
+        All
+      </button>
+      <button class="tab">Beginner friendly</button>
+      <button class="tab">Bug fixes</button>
+      <button class="tab">Features</button>
+      <button class="tab">Docs</button>
+    </div>
+
+    <!-- Feed -->
+    <div class="feed">
+
+      <!-- PR Card 1 -->
+      <div class="pr-card">
+        <div class="pr-card-header">
+          <div class="pr-author-row">
+            <div class="author-avatar" style="background:linear-gradient(135deg,#10b981,#3b82f6);">
+              MK
+              <div class="avatar-badge">
+                <svg viewBox="0 0 24 24" fill="#3fb950" stroke="none">
+                  <circle cx="12" cy="12" r="12"/>
+                  <polyline points="20 6 9 17 4 12" stroke="#0d0d0d" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                </svg>
+              </div>
+            </div>
+            <div class="author-info">
+              <div class="author-top">
+                <span class="author-name">Maya Krishnan</span>
+                <span class="badge badge-merged">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/>
+                    <path d="M13 6h3a2 2 0 0 1 2 2v7"/><line x1="6" y1="9" x2="6" y2="21"/>
+                  </svg>
+                  Merged
+                </span>
+                <span class="badge badge-beginner">Beginner friendly</span>
+              </div>
+              <div class="pr-meta">rocketchat/Rocket.Chat #28471 · 2h ago</div>
+            </div>
+          </div>
+          <button class="bookmark-btn" title="Save">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+            </svg>
+          </button>
+        </div>
+
+        <div class="pr-title">Fix message reaction count not updating in real time</div>
+
+        <div class="ai-summary">
+          <div class="ai-summary-header">
+            <div class="ai-summary-left">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 3c-1 3-4 5-5 8s0 6 5 8c5-2 6-5 5-8-1-3-4-5-5-8z"/>
+                <path d="M12 3v18"/><path d="M5 12h14"/>
+              </svg>
+              AI Summary
+            </div>
+            <span class="judge-score">Judge 9.1/10</span>
+          </div>
+          <div class="ai-summary-text">
+            This PR fixes a bug where reaction counts froze until a page refresh. The author subscribed the reaction component to the live message stream, so updates now render instantly. Great example of reactive state handling for newcomers.
+          </div>
+          <div class="context-row">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+            </svg>
+            Context from
+            <a class="context-link" href="#">streams.md</a>
+            <a class="context-link" href="#">reactions-api.md</a>
+          </div>
+        </div>
+
+        <div class="pr-card-footer">
+          <div class="pr-diff-info">
+            <div class="diff-files">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/>
+                <polyline points="13 2 13 9 20 9"/>
+              </svg>
+              4 files
+            </div>
+            <span class="diff-add">+ 62</span>
+            <span class="diff-del">— 11</span>
+          </div>
+          <div class="pr-actions">
+            <button class="btn-reexplain">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+              </svg>
+              Re-explain
+            </button>
+            <button class="btn-details">
+              View details
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- PR Card 2 -->
+      <div class="pr-card">
+        <div class="pr-card-header">
+          <div class="pr-author-row">
+            <div class="author-avatar" style="background:linear-gradient(135deg,#f59e0b,#ef4444);">
+              LO
+              <div class="avatar-badge">
+                <svg viewBox="0 0 24 24" fill="#3fb950" stroke="none">
+                  <circle cx="12" cy="12" r="12"/>
+                  <polyline points="20 6 9 17 4 12" stroke="#0d0d0d" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                </svg>
+              </div>
+            </div>
+            <div class="author-info">
+              <div class="author-top">
+                <span class="author-name">Leo Okafor</span>
+                <span class="badge badge-merged">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/>
+                    <path d="M13 6h3a2 2 0 0 1 2 2v7"/><line x1="6" y1="9" x2="6" y2="21"/>
+                  </svg>
+                  Merged
+                </span>
+                <span class="badge badge-feature">Feature</span>
+              </div>
+              <div class="pr-meta">rocketchat/Rocket.Chat #28455 · 5h ago</div>
+            </div>
+          </div>
+          <button class="bookmark-btn" title="Save">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+            </svg>
+          </button>
+        </div>
+
+        <div class="pr-title">Add slash command for scheduling recurring messages</div>
+
+        <div class="ai-summary">
+          <div class="ai-summary-header">
+            <div class="ai-summary-left">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 3c-1 3-4 5-5 8s0 6 5 8c5-2 6-5 5-8-1-3-4-5-5-8z"/>
+                <path d="M12 3v18"/><path d="M5 12h14"/>
+              </svg>
+              AI Summary
+            </div>
+            <span class="judge-score">Judge 8.4/10</span>
+          </div>
+          <div class="ai-summary-text">
+            Introduces a /schedule command that lets users queue recurring messages via a cron-style picker. The author wired the command into the existing slash registry and added a job runner. A solid intro to how Rocket.Chat extends its command system.
+          </div>
+          <div class="context-row">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+            </svg>
+            Context from
+            <a class="context-link" href="#">slash-commands.md</a>
+            <a class="context-link" href="#">scheduler.md</a>
+          </div>
+        </div>
+
+        <div class="pr-card-footer">
+          <div class="pr-diff-info">
+            <div class="diff-files">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/>
+                <polyline points="13 2 13 9 20 9"/>
+              </svg>
+              11 files
+            </div>
+            <span class="diff-add">+ 284</span>
+            <span class="diff-del">— 7</span>
+          </div>
+          <div class="pr-actions">
+            <button class="btn-reexplain">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+              </svg>
+              Re-explain
+            </button>
+            <button class="btn-details">
+              View details
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /feed -->
+  </main>
+</div>
+
+<script>
+  // Tab switching
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+    });
+  });
+
+  // Sidebar nav switching
+  document.querySelectorAll('.nav-item').forEach(item => {
+    item.addEventListener('click', () => {
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+      item.classList.add('active');
+    });
+  });
+
+  // Bookmark toggle
+  document.querySelectorAll('.bookmark-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const svg = btn.querySelector('svg');
+      const isSaved = btn.dataset.saved === 'true';
+      if (isSaved) {
+        svg.style.fill = 'none';
+        svg.style.color = 'var(--text-muted)';
+        btn.dataset.saved = 'false';
+      } else {
+        svg.style.fill = 'var(--text-secondary)';
+        svg.style.color = 'var(--text-secondary)';
+        btn.dataset.saved = 'true';
+      }
+    });
+  });
+</script>
+</body>
+</html>
