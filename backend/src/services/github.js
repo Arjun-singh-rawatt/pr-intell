@@ -1,3 +1,4 @@
+// PATH: backend/src/services/github.js
 import { isConfiguredEnv } from '../utils/env.js';
 
 const BASE = 'https://api.github.com';
@@ -23,10 +24,41 @@ async function githubFetch(url) {
   return res.json();
 }
 
-export async function getMergedPRs(page = 1, perPage = 20) {
-  const url = `${BASE}/repos/${REPO}/pulls?state=closed&sort=updated&direction=desc&per_page=${perPage}&page=${page}`;
-  const prs = await githubFetch(url);
-  return prs.filter(pr => pr.merged_at !== null).map(pr => ({
+// ── Updated: rolling 30-day window ───────────────────
+export async function getMergedPRs(page = 1, perPage = 30, sinceDays = 30, maxPages = 6) {
+  const cutoff = new Date(Date.now() - sinceDays * 86400 * 1000).toISOString();
+  const allPRs = [];
+
+  if (page === 1) {
+    // Auto-paginate until window is filled
+    for (let p = 1; p <= maxPages; p++) {
+      const url = `${BASE}/repos/${REPO}/pulls?state=closed&sort=updated&direction=desc&per_page=${perPage}&page=${p}`;
+      const batch = await githubFetch(url);
+      if (!batch.length) break;
+
+      const inWindow = batch.filter(pr => pr.merged_at !== null && pr.merged_at >= cutoff).map(mapPR);
+      allPRs.push(...inWindow);
+
+      // Early exit once oldest item on page predates cutoff
+      const oldest = batch.filter(b => b.merged_at).at(-1);
+      if (oldest && oldest.merged_at < cutoff) break;
+    }
+  } else {
+    // Load older — go further back in pages
+    const startPage = (page - 1) * maxPages + 1;
+    for (let p = startPage; p < startPage + maxPages; p++) {
+      const url = `${BASE}/repos/${REPO}/pulls?state=closed&sort=updated&direction=desc&per_page=${perPage}&page=${p}`;
+      const batch = await githubFetch(url);
+      if (!batch.length) break;
+      allPRs.push(...batch.filter(pr => pr.merged_at !== null).map(mapPR));
+    }
+  }
+
+  return allPRs;
+}
+
+function mapPR(pr) {
+  return {
     number: pr.number,
     title: pr.title,
     body: pr.body,
@@ -45,7 +77,7 @@ export async function getMergedPRs(page = 1, perPage = 20) {
     changed_files: pr.changed_files,
     comments: pr.comments,
     review_comments: pr.review_comments,
-  }));
+  };
 }
 
 function mapSearchItemToPR(item) {

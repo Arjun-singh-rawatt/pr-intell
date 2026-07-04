@@ -1,3 +1,4 @@
+// PATH: backend/src/routes/prs.js
 import express from 'express';
 import { getMergedPRs, getPRDetail } from '../services/github.js';
 import { summarizePR } from '../services/ai.js';
@@ -7,9 +8,10 @@ const router = express.Router();
 
 router.get('/', async (req, res) => {
   try {
-    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
-    const prs = await getMergedPRs(page);
-    res.json({ prs, page });
+    const page      = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const sinceDays = Math.min(Math.max(7, parseInt(req.query.since, 10) || 30), 90);
+    const prs = await getMergedPRs(page, 30, sinceDays);
+    res.json({ prs, page, sinceDays, windowLabel: `Last ${sinceDays} days` });
   } catch (err) {
     console.error('[GET /api/prs]', err.message);
     res.status(500).json({ error: err.message });
@@ -37,13 +39,7 @@ router.get('/:number', async (req, res) => {
 router.post('/:number/summarize', async (req, res) => {
   try {
     const { pr, files, comments } = await getPRDetail(req.params.number);
-    const summary = await summarizePR({
-      title: pr.title,
-      body: pr.body,
-      files,
-      labels: pr.labels,
-      comments,
-    });
+    const summary = await summarizePR({ title: pr.title, body: pr.body, files, labels: pr.labels, comments });
     res.json(summary);
   } catch (err) {
     console.error(`[POST /api/prs/${req.params.number}/summarize]`, err.message);

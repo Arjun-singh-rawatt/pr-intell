@@ -26,6 +26,7 @@ notepad .env
 | `OPENAI_API_KEY` | Optional | Extra AI provider |
 | `GROK_API_KEY` | Optional | Extra AI provider |
 | `DEEPSEEK_API_KEY` | Optional | Extra AI provider |
+| `MONGODB_URI` | Optional | Auth/session/key storage in MongoDB. If missing or unreachable, PR Intel falls back to `backend/data/auth-store.json` |
 | Ollama | Optional | Local fallback if cloud keys exhausted |
 
 Leave unused keys **empty**. Do not paste example placeholders like `ghp_xxxx`.
@@ -59,6 +60,7 @@ cd frontend; npm run dev
 ## Data files (auto-created)
 
 - `backend/data/store.json` — settings + bookmarks (gitignored)  
+- `backend/data/auth-store.json` — local fallback for auth sessions + per-user AI keys when MongoDB is unavailable  
 - `backend/data/kb-documents.json` — Rocket.Chat doc index (committed)
 
 ## Troubleshooting
@@ -66,5 +68,7 @@ cd frontend; npm run dev
 **Bad credentials (GitHub)** — Remove invalid `GITHUB_TOKEN` or set a real token.
 
 **AI errors** — Add `GEMINI_API_KEY` or run [Ollama](https://ollama.com) locally.
+
+**MongoDB SRV/DNS errors** — If Atlas `mongodb+srv://` is blocked on your network, the app will use `backend/data/auth-store.json`. To force Atlas, replace it with the standard `mongodb://` connection string from Atlas.
 
 **Port in use** — Stop the old process on 5000 or change `PORT` in `.env`.
