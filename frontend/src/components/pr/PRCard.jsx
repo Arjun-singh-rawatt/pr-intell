@@ -131,12 +131,6 @@ export default function PRCard({
         </div>
         <div className="flex items-center gap-2">
           <button
-            className="h-8 rounded-[10px] border border-line bg-panel px-3 text-[13px] font-medium text-ink transition-colors hover:bg-panel2"
-            type="button"
-          >
-            Re-explain
-          </button>
-          <button
             className="inline-flex h-8 items-center gap-1.5 rounded-[10px] bg-accent px-3 text-[13px] font-semibold text-white transition-colors hover:bg-accent2"
             onClick={() => onOpen(pr.number)}
             type="button"
