@@ -1,14 +1,5 @@
-
-import mongoose from 'mongoose';
-
 export async function connectDB() {
-  const uri = process.env.MONGODB_URI;
-  if (!uri) {
-    throw new Error('MONGODB_URI is not set in .env');
-  }
-  mongoose.connection.on('error', (err) => {
-    console.error('MongoDB connection error:', err.message);
-  });
-  await mongoose.connect(uri);
-  console.log('✓ MongoDB connected');
+  // The app is currently using a file-based store rather than a live database.
+  // This keeps startup simple and avoids crashing when no MongoDB connection is configured.
+  return true;
 }

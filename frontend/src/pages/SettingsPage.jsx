@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
 import { useAppData } from '../context/AppDataContext.jsx';
 import {
   BellIcon,
@@ -13,11 +12,9 @@ import ApiKeysPanel from '../components/settings/ApiKeysPanel.jsx';
 import { logout } from '../api/auth.js';
 
 export default function SettingsPage() {
-  const { routerStatus, repository, feedItems, summaryCache, settings, saveSettings, currentUser } = useAppData();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const { routerStatus, repository, feedItems, summaryCache, settings, saveSettings } = useAppData();
   const [draft, setDraft] = useState(settings);
   const [savedAt, setSavedAt] = useState('');
-  const authError = searchParams.get('error');
 
   useEffect(() => {
     setDraft(settings);
@@ -65,16 +62,6 @@ export default function SettingsPage() {
     window.location.reload();
   };
 
-  const handleSignIn = () => {
-    window.location.href = '/api/auth/github';
-  };
-
-  const dismissAuthError = () => {
-    const next = new URLSearchParams(searchParams);
-    next.delete('error');
-    setSearchParams(next, { replace: true });
-  };
-
   return (
     <div className="space-y-6">
       <div className="space-y-1">
@@ -84,30 +71,11 @@ export default function SettingsPage() {
         <h1 className="text-[28px] font-bold tracking-tight text-ink">Profile Settings</h1>
       </div>
 
-      {authError === 'auth_failed' ? (
-        <Panel className="border-red/30 bg-red/10 p-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm font-medium text-red">GitHub sign-in failed — check backend logs.</p>
-            <Button onClick={dismissAuthError} size="sm" type="button" variant="outline">
-              Dismiss
-            </Button>
-          </div>
-        </Panel>
-      ) : null}
-
       <Panel className="rounded-[12px] border border-line bg-panel p-6 shadow-sm">
         <div className="grid gap-6 lg:grid-cols-[160px,1fr]">
           <div className="flex flex-col items-center">
             <div className="relative flex h-[112px] w-[112px] items-center justify-center rounded-[8px] border border-line bg-panel2 shadow-sm">
-              {currentUser?.avatarUrl ? (
-                <img
-                  alt={currentUser.username}
-                  className="h-full w-full rounded-[8px] object-cover"
-                  src={currentUser.avatarUrl}
-                />
-              ) : (
-                <UserRoundIcon className="h-12 w-12 text-muted" />
-              )}
+              <UserRoundIcon className="h-12 w-12 text-muted" />
               <button
                 className="absolute -bottom-2 -right-2 rounded-full border border-line bg-panel p-2 shadow-sm transition-colors hover:bg-panel2"
                 type="button"
@@ -121,15 +89,6 @@ export default function SettingsPage() {
           </div>
 
           <div className="space-y-4">
-            {currentUser ? (
-              <div className="rounded-[12px] border border-success/20 bg-success/10 px-4 py-3">
-                <div className="text-[11px] font-semibold uppercase tracking-wider text-success">GitHub identity</div>
-                <div className="mt-1 text-sm font-semibold text-ink">Signed in as @{currentUser.username} via GitHub</div>
-                {currentUser.displayName ? (
-                  <div className="mt-1 text-sm text-soft">{currentUser.displayName}</div>
-                ) : null}
-              </div>
-            ) : null}
             <label className="block">
               <span className="mb-2 block text-[11px] font-semibold uppercase tracking-wider text-soft">
                 Display Name
@@ -237,14 +196,12 @@ export default function SettingsPage() {
 
       <div className="flex flex-col gap-4 border-t border-line pt-6 sm:flex-row sm:items-center sm:justify-between">
         <Button
-          className={currentUser
-            ? 'h-10 rounded-[12px] border border-red/30 bg-transparent px-4 text-red hover:bg-red/10 hover:text-red'
-            : 'h-10 rounded-[12px] px-4'}
-          onClick={currentUser ? handleSignOut : handleSignIn}
+          className="h-10 rounded-[12px] border border-red/30 bg-transparent px-4 text-red hover:bg-red/10 hover:text-red"
+          onClick={handleSignOut}
           type="button"
-          variant={currentUser ? 'ghost' : 'solid'}
+          variant="ghost"
         >
-          {currentUser ? 'Sign Out' : 'Sign In'}
+          Sign Out
         </Button>
 
         <div className="flex flex-wrap items-center gap-3">
@@ -263,6 +220,9 @@ export default function SettingsPage() {
         </div>
       </div>
 
+      <p className="pt-4 text-center font-mono text-[11px] uppercase tracking-[0.18em] text-muted">
+        preferences sync to backend/data/store.json (local dev store)
+      </p>
     </div>
   );
 }

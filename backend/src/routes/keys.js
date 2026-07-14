@@ -1,5 +1,3 @@
-// PATH: pr-intel/backend/src/routes/keys.js
-
 import express from 'express';
 import { requireAuth } from '../middleware/requireAuth.js';
 import { encrypt, decrypt, maskKey } from '../utils/crypto.js';
@@ -20,7 +18,11 @@ router.get('/', requireAuth, (req, res) => {
   for (const provider of PROVIDERS) {
     const record = req.user.apiKeys?.[provider];
     status[provider] = record
-      ? { configured: true, updatedAt: record.updatedAt }
+      ? {
+          configured: true,
+          updatedAt: record.updatedAt,
+          masked: record.masked || '••••••••',
+        }
       : { configured: false };
   }
   res.json(status);
@@ -38,13 +40,14 @@ router.post('/:provider', requireAuth, async (req, res) => {
 
     const encrypted = encrypt(apiKey.trim());
     req.user.apiKeys = req.user.apiKeys || {};
-    req.user.apiKeys[provider] = { ...encrypted, updatedAt: new Date() };
+    const masked = maskKey(apiKey.trim());
+    req.user.apiKeys[provider] = { ...encrypted, masked, updatedAt: new Date() };
     await req.user.save();
 
     res.json({
       provider,
       configured: true,
-      masked: maskKey(apiKey.trim()),
+      masked,
       updatedAt: req.user.apiKeys[provider].updatedAt,
     });
   } catch (err) {

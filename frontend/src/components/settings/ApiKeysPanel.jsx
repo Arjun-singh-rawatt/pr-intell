@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { useAppData } from '../../context/AppDataContext.jsx';
 import { CpuIcon, SaveIcon, TrashIcon } from '../common/Icons.jsx';
 import { Button, Panel, Pill, TextInput } from '../common/UI.jsx';
 import { deleteKey, fetchKeyStatus, saveKey } from '../../api/keys.js';
@@ -95,7 +94,6 @@ function ProviderKeyCard({ provider, status, onSave, onDelete }) {
 }
 
 export default function ApiKeysPanel() {
-  const { currentUser, authLoading } = useAppData();
   const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
@@ -118,9 +116,8 @@ export default function ApiKeysPanel() {
   };
 
   useEffect(() => {
-    if (authLoading) return;
     load();
-  }, [authLoading, currentUser?.id]);
+  }, []);
 
   const handleSave = async (providerId, apiKey) => {
     await saveKey(providerId, apiKey);
