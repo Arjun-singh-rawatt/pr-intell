@@ -1,53 +1,24 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  deleteExplanation,
+  fetchExplanations,
+  generateExplanation,
+  rateExplanation,
+} from '../../api/explanations.js';
 import { useAppData } from '../../context/AppDataContext.jsx';
 import { formatAbsoluteDate } from '../../utils/format.js';
 import { getTypeMeta, inferPRType } from '../../utils/pr.js';
 import {
   BookmarkIcon,
-  BookIcon,
   ExternalLinkIcon,
   FileDiffIcon,
   MinusIcon,
   PlusIcon,
-  SearchIcon,
   SparklesIcon,
+  TrashIcon,
   XIcon,
 } from '../common/Icons.jsx';
-import { Button, Panel, Pill, cn } from '../common/UI.jsx';
-
-/**
- * ============================================================================
- * AI Provider Router Status
- * ============================================================================
- * 
- * This component displays the health status of available AI providers
- * (Claude, Gemini, OpenAI, Grok, DeepSeek, Ollama).
- * 
- * The backend routes PR summarization requests through available providers,
- * falling back to Ollama when primary providers are exhausted.
- * 
- * STATUS INDICATORS:
- * - Green (success): Provider is configured and has quota available
- * - Yellow (warn): Provider is configured but exhausted/degraded
- * - Gray (neutral): Provider not configured (API key missing)
- * - Blue (accent): Ollama fallback is available
- * 
- * DATA SOURCE: GET /api/prs/router-status
- * - Returns via AppDataContext: routerStatus
- * - Auto-refreshed on each summarization request
- * 
- * FEATURES:
- * ✅ Real-time provider status monitoring
- * ✅ Current provider cursor tracking
- * ✅ Visual health indicators
- * 
- * POTENTIAL ENHANCEMENTS:
- * ❌ Cost tracking per provider (not implemented)
- * ❌ Historical usage statistics (not implemented)
- * ❌ Provider preference settings (not implemented)
- * ❌ Manual provider selection (not implemented)
- * ❌ Provider queue visualization (not implemented)
- */
+import { Button, Panel, Pill, TextInput, cn } from '../common/UI.jsx';
 
 function RouterStatusStrip({ routerStatus }) {
   if (!routerStatus) return null;
@@ -78,92 +49,225 @@ function RouterStatusStrip({ routerStatus }) {
   );
 }
 
-function SummarySection({ summary, onExplain, loading, error }) {
-  if (!summary && !loading) {
-    return (
-      <Button className="w-full justify-center" onClick={onExplain} size="lg">
-        <SparklesIcon className="h-4 w-4" />
-        Explain with AI
-      </Button>
-    );
-  }
+function sortExplanations(items) {
+  return [...items].sort((left, right) => {
+    if (right.score !== left.score) return right.score - left.score;
+    if ((right.ratingCount || 0) !== (left.ratingCount || 0)) {
+      return (right.ratingCount || 0) - (left.ratingCount || 0);
+    }
+    return new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime();
+  });
+}
 
-  if (loading) {
-    return (
-      <Panel className="border-accent/20 bg-accent/6 p-5">
-        <div className="flex items-center gap-2 text-sm text-accent">
-          <SparklesIcon className="h-4 w-4" />
-          Routing this PR through the available AI providers...
-        </div>
-        <div className="mt-4 space-y-2">
-          <div className="h-2 rounded-full bg-white/8" />
-          <div className="h-2 w-5/6 rounded-full bg-white/8" />
-          <div className="h-2 w-3/4 rounded-full bg-white/8" />
-        </div>
-      </Panel>
-    );
-  }
+function explanationToSummaryPreview(explanation) {
+  if (!explanation) return null;
 
-  if (error) {
-    return (
-      <Panel className="border-warn/30 bg-warn/10 p-4 text-sm text-warn">
-        {error}
-      </Panel>
-    );
-  }
+  return {
+    summary: explanation.content,
+    _provider: explanation.provider,
+    score: explanation.score,
+  };
+}
 
-  const type = inferPRType(null, summary);
-  const typeMeta = getTypeMeta(type);
+function formatScore(score) {
+  if (!Number.isFinite(score)) return '0';
+  return Number.isInteger(score) ? String(score) : score.toFixed(1);
+}
+
+function ExplanationCard({
+  explanation,
+  currentUserId,
+  authLoading,
+  ratePendingId,
+  deletePendingId,
+  onRate,
+  onDelete,
+}) {
+  const [ratingInput, setRatingInput] = useState(
+    explanation.currentUserRating ? String(explanation.currentUserRating) : ''
+  );
+  const isOwner = Boolean(currentUserId && explanation.generatedBy?.userId === currentUserId);
+  const rateDisabled = authLoading || !currentUserId || ratePendingId === explanation.id;
+  const deleteDisabled = deletePendingId === explanation.id;
+
+  useEffect(() => {
+    setRatingInput(explanation.currentUserRating ? String(explanation.currentUserRating) : '');
+  }, [explanation.currentUserRating]);
+
+  const handleRateSubmit = () => {
+    const parsed = Number.parseInt(ratingInput, 10);
+    if (!Number.isInteger(parsed) || parsed < 1 || parsed > 10) {
+      return;
+    }
+    onRate(explanation.id, parsed);
+  };
 
   return (
-    <Panel className="border-accent/20 bg-accent/6 p-5">
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-sm font-medium text-accent">AI Summary</span>
-        <span className="font-mono text-[11px] text-soft">via {summary._provider || 'router'}</span>
-        <span className={cn('ml-auto rounded-full border px-2.5 py-1 text-xs', typeMeta.pill)}>{typeMeta.label}</span>
-        <Pill tone="violet">{summary.difficulty || 'intermediate'}</Pill>
+    <Panel className="p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-sm font-semibold text-ink">
+              {explanation.generatedBy?.username || 'Anonymous'}
+            </span>
+            <Pill tone="accent">{explanation.provider || 'AI'}</Pill>
+            <span className="font-mono text-[11px] text-soft">
+              {formatAbsoluteDate(explanation.createdAt)}
+            </span>
+          </div>
+          <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
+            <div>
+              <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-soft">Rating</span>
+              <div className="mt-1 font-semibold text-ink">{formatScore(explanation.score)} / 10</div>
+            </div>
+            <div>
+              <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-soft">Raters</span>
+              <div className="mt-1 font-semibold text-ink">{explanation.ratingCount || 0}</div>
+            </div>
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <TextInput
+            className="w-[96px]"
+            disabled={rateDisabled}
+            inputMode="numeric"
+            max="10"
+            min="1"
+            onChange={(event) => setRatingInput(event.target.value)}
+            placeholder="1-10"
+            type="number"
+            value={ratingInput}
+          />
+          <Button
+            disabled={
+              rateDisabled
+              || !ratingInput
+              || Number.parseInt(ratingInput, 10) < 1
+              || Number.parseInt(ratingInput, 10) > 10
+            }
+            onClick={handleRateSubmit}
+            size="sm"
+            type="button"
+            variant="outline"
+          >
+            {ratePendingId === explanation.id ? 'Saving...' : 'Rate /10'}
+          </Button>
+          {isOwner ? (
+            <Button
+              className="text-red"
+              disabled={deleteDisabled}
+              onClick={() => onDelete(explanation.id)}
+              size="sm"
+              type="button"
+              variant="ghost"
+            >
+              <TrashIcon className="h-4 w-4" />
+              Delete
+            </Button>
+          ) : null}
+        </div>
       </div>
-      <p className="mt-4 whitespace-pre-wrap break-words text-base font-semibold leading-7 text-ink">{summary.oneLiner}</p>
-      <div className="mt-4 space-y-4">
-        {summary.summary ? (
-          <div>
-            <p className="font-mono text-[11px] uppercase tracking-[0.24em] text-soft">Summary</p>
-            <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-6 text-soft">{summary.summary}</p>
-          </div>
-        ) : null}
-        {summary.problemSolved ? (
-          <div>
-            <p className="font-mono text-[11px] uppercase tracking-[0.24em] text-soft">Problem solved</p>
-            <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-6 text-soft">{summary.problemSolved}</p>
-          </div>
-        ) : null}
-        {summary.technicalDetails ? (
-          <div>
-            <p className="font-mono text-[11px] uppercase tracking-[0.24em] text-soft">Technical details</p>
-            <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-6 text-soft">{summary.technicalDetails}</p>
-          </div>
-        ) : null}
-        {summary.whatToLearn ? (
-          <div>
-            <p className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.24em] text-warn">
-              <BookIcon className="h-3.5 w-3.5" />
-              What to learn
-            </p>
-            <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-6 text-ink">{summary.whatToLearn}</p>
-          </div>
-        ) : null}
-        {summary.similarContribution ? (
-          <div>
-            <p className="font-mono text-[11px] uppercase tracking-[0.24em] text-soft">Next contribution idea</p>
-            <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-6 text-soft">{summary.similarContribution}</p>
-          </div>
-        ) : null}
+
+      {explanation.currentUserRating ? (
+        <div className="mt-3 text-xs text-soft">Your rating: {explanation.currentUserRating} / 10</div>
+      ) : null}
+
+      <div className="mt-4 whitespace-pre-wrap break-words text-sm leading-6 text-soft">
+        {explanation.content}
       </div>
-      <Button className="mt-5" onClick={onExplain} variant="ghost">
-        <SparklesIcon className="h-4 w-4" />
-        Re-explain
-      </Button>
     </Panel>
+  );
+}
+
+function SharedExplanationsSection({
+  authLoading,
+  currentUser,
+  deletePendingId,
+  error,
+  explanations,
+  generating,
+  loading,
+  shareSuccess,
+  hasSharedExplanation,
+  onDelete,
+  onGenerate,
+  onRate,
+  ratePendingId,
+}) {
+  const isSignedIn = Boolean(currentUser?.id);
+
+  return (
+    <div className="space-y-4">
+      <Panel className="border-accent/20 bg-accent/6 p-5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <div className="text-sm font-semibold text-accent">Shared AI Explanations</div>
+            <p className="mt-1 text-sm leading-6 text-soft">
+              Shared across everyone reviewing this pull request. Rate each explanation from 1 to 10.
+            </p>
+          </div>
+          <Button
+            disabled={!isSignedIn || authLoading || generating || hasSharedExplanation}
+            onClick={onGenerate}
+            size="sm"
+            type="button"
+          >
+            <SparklesIcon className="h-4 w-4" />
+            {hasSharedExplanation ? 'Explanation Shared' : generating ? 'Sharing...' : 'Share Your Explanation'}
+          </Button>
+        </div>
+
+        {!isSignedIn && !authLoading ? (
+          <div className="mt-4 flex flex-col gap-3 border-t border-white/8 pt-4 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-warn">Sign in with GitHub to rate or share explanations.</p>
+            <Button onClick={() => { window.location.href = '/api/auth/github'; }} size="sm" type="button">
+              Sign in with GitHub
+            </Button>
+          </div>
+        ) : null}
+      </Panel>
+
+      {shareSuccess ? (
+        <Panel className="border-success/30 bg-success/10 p-4 text-sm text-success">
+          Shared successfully.
+        </Panel>
+      ) : null}
+
+      {error ? (
+        <Panel className="border-warn/30 bg-warn/10 p-4 text-sm text-warn">
+          {error}
+        </Panel>
+      ) : null}
+
+      {loading && !explanations.length ? (
+        <Panel className="p-5">
+          <div className="space-y-2">
+            <div className="h-2 rounded-full bg-white/8" />
+            <div className="h-2 w-5/6 rounded-full bg-white/8" />
+            <div className="h-2 w-3/4 rounded-full bg-white/8" />
+          </div>
+        </Panel>
+      ) : null}
+
+      {!loading && !explanations.length ? (
+        <Panel className="border-dashed border-white/10 bg-black/10 p-5 text-sm text-soft">
+          No shared explanations yet. Share the first explanation for this PR.
+        </Panel>
+      ) : null}
+
+      {explanations.map((explanation) => (
+        <ExplanationCard
+          key={explanation.id}
+          authLoading={authLoading}
+          currentUserId={currentUser?.id || ''}
+          deletePendingId={deletePendingId}
+          explanation={explanation}
+          onDelete={onDelete}
+          onRate={onRate}
+          ratePendingId={ratePendingId}
+        />
+      ))}
+    </div>
   );
 }
 
@@ -172,9 +276,10 @@ export default function PRDetailDrawer({ prNumber, onClose }) {
     detailCache,
     detailLoading,
     getDetail,
+    currentUser,
+    authLoading,
     summaryCache,
-    summaryLoading,
-    summarize,
+    cacheSummary,
     routerStatus,
     refreshRouterStatus,
     toggleSaved,
@@ -183,18 +288,49 @@ export default function PRDetailDrawer({ prNumber, onClose }) {
     isKbSaved,
   } = useAppData();
   const [detailError, setDetailError] = useState(null);
-  const [summaryError, setSummaryError] = useState(null);
+  const [explanations, setExplanations] = useState([]);
+  const [explanationsLoading, setExplanationsLoading] = useState(false);
+  const [explanationsError, setExplanationsError] = useState(null);
+  const [shareSuccess, setShareSuccess] = useState(false);
+  const [generatingExplanation, setGeneratingExplanation] = useState(false);
+  const [ratePendingId, setRatePendingId] = useState('');
+  const [deletePendingId, setDeletePendingId] = useState('');
 
   const detail = prNumber ? detailCache[prNumber] : null;
   const summary = prNumber ? summaryCache[prNumber] : null;
   const loadingDetail = prNumber ? detailLoading[prNumber] : false;
-  const loadingSummary = prNumber ? summaryLoading[prNumber] : false;
+  const hasSharedExplanation = useMemo(
+    () => explanations.some((item) => item.generatedBy?.userId === currentUser?.id),
+    [currentUser?.id, explanations]
+  );
+
+  const loadExplanations = useCallback(async (targetPrNumber, clearExisting = false) => {
+    if (!targetPrNumber) return;
+
+    if (clearExisting) {
+      setExplanations([]);
+    }
+
+    setExplanationsLoading(true);
+    setExplanationsError(null);
+
+    try {
+      const data = await fetchExplanations(targetPrNumber);
+      setExplanations(sortExplanations(data));
+    } catch (error) {
+      setExplanationsError(error.response?.data?.error || error.message);
+    } finally {
+      setExplanationsLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     if (!prNumber) return undefined;
 
     setDetailError(null);
-    setSummaryError(null);
+    setExplanationsError(null);
+    setShareSuccess(false);
+    loadExplanations(prNumber, true);
 
     getDetail(prNumber).catch((error) => {
       setDetailError(error.response?.data?.error || error.message);
@@ -210,23 +346,82 @@ export default function PRDetailDrawer({ prNumber, onClose }) {
 
     window.addEventListener('keydown', onEscape);
     return () => window.removeEventListener('keydown', onEscape);
-  }, [getDetail, onClose, prNumber, refreshRouterStatus]);
+  }, [getDetail, loadExplanations, onClose, prNumber, refreshRouterStatus]);
 
-  const handleExplain = async () => {
-    if (!prNumber) return;
-    setSummaryError(null);
+  useEffect(() => {
+    if (!prNumber || explanationsLoading) return;
+    cacheSummary(prNumber, explanationToSummaryPreview(explanations[0]) || null);
+  }, [cacheSummary, explanations, explanationsLoading, prNumber]);
+
+  const handleGenerateExplanation = async () => {
+    if (!prNumber || !currentUser?.id || generatingExplanation) return;
+
+    setGeneratingExplanation(true);
+    setExplanationsError(null);
+    setShareSuccess(false);
+
     try {
-      await summarize(prNumber);
+      const created = await generateExplanation(prNumber);
+      setExplanations((current) => sortExplanations([created, ...current]));
+      setShareSuccess(true);
+      await refreshRouterStatus();
     } catch (error) {
-      setSummaryError(error.response?.data?.error || error.message);
+      if (error.response?.status === 409 && hasSharedExplanation) {
+        setExplanationsError(null);
+        setShareSuccess(true);
+      } else {
+      const status = error.response?.status;
+        if (status && status >= 500) {
+          await refreshRouterStatus();
+        } else {
+          setExplanationsError(error.response?.data?.error || error.message);
+        }
+      }
+    } finally {
+      setGeneratingExplanation(false);
+    }
+  };
+
+  const handleRate = async (explanationId, rating) => {
+    if (!prNumber || !currentUser?.id) return;
+
+    setRatePendingId(explanationId);
+    setExplanationsError(null);
+
+    try {
+      const updated = await rateExplanation(prNumber, explanationId, rating);
+      setExplanations((current) =>
+        sortExplanations(current.map((item) => (item.id === updated.id ? updated : item)))
+      );
+    } catch (error) {
+      setExplanationsError(error.response?.data?.error || error.message);
+    } finally {
+      setRatePendingId('');
+    }
+  };
+
+  const handleDelete = async (explanationId) => {
+    if (!prNumber || !currentUser?.id) return;
+
+    setDeletePendingId(explanationId);
+    setExplanationsError(null);
+
+    try {
+      await deleteExplanation(prNumber, explanationId);
+      setExplanations((current) => current.filter((item) => item.id !== explanationId));
+    } catch (error) {
+      setExplanationsError(error.response?.data?.error || error.message);
+    } finally {
+      setDeletePendingId('');
     }
   };
 
   const saved = prNumber ? isSaved(prNumber) : false;
+  const featuredSummary = explanations[0] ? explanationToSummaryPreview(explanations[0]) : summary;
   const typeMeta = useMemo(() => {
     const current = detail?.pr;
-    return current ? getTypeMeta(inferPRType(current, summary)) : null;
-  }, [detail, summary]);
+    return current ? getTypeMeta(inferPRType(current, featuredSummary)) : null;
+  }, [detail, featuredSummary]);
 
   return (
     <>
@@ -246,7 +441,7 @@ export default function PRDetailDrawer({ prNumber, onClose }) {
       >
         <div className="flex items-center justify-between border-b border-white/8 px-5 py-4">
           <div>
-            <div className="font-mono text-xs text-soft">PR #{prNumber || '—'}</div>
+            <div className="font-mono text-xs text-soft">PR #{prNumber || '-'}</div>
             <div className="text-sm font-semibold text-ink">Detailed breakdown</div>
           </div>
           <div className="flex items-center gap-2">
@@ -257,7 +452,7 @@ export default function PRDetailDrawer({ prNumber, onClose }) {
               </Button>
             ) : null}
             {detail?.pr ? (
-              <Button onClick={() => toggleSaved(detail.pr, detail, summary)} size="sm" variant="ghost">
+              <Button onClick={() => toggleSaved(detail.pr, detail, featuredSummary || summary)} size="sm" variant="ghost">
                 <BookmarkIcon filled={saved} className="h-4 w-4" />
                 {saved ? 'Saved' : 'Save'}
               </Button>
@@ -322,11 +517,20 @@ export default function PRDetailDrawer({ prNumber, onClose }) {
                 ) : null}
               </div>
 
-              <SummarySection
-                error={summaryError}
-                loading={loadingSummary}
-                onExplain={handleExplain}
-                summary={summary}
+              <SharedExplanationsSection
+                authLoading={authLoading}
+                currentUser={currentUser}
+                deletePendingId={deletePendingId}
+                error={explanationsError}
+                explanations={explanations}
+                generating={generatingExplanation}
+                hasSharedExplanation={hasSharedExplanation}
+                loading={explanationsLoading}
+                onDelete={handleDelete}
+                onGenerate={handleGenerateExplanation}
+                onRate={handleRate}
+                ratePendingId={ratePendingId}
+                shareSuccess={shareSuccess}
               />
 
               {detail.pr.body ? (

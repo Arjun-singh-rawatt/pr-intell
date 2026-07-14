@@ -76,7 +76,7 @@ export default function SavedPage() {
             </Button>
           </div>
         }
-        description="Saved PRs, knowledge-base docs, and contributor profiles persist in backend/data/store.json."
+        description="If you don't know the path, learn from someone who knows it."
         eyebrow="Bookmarks"
         title="Saved Items"
       />

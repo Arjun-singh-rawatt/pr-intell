@@ -17,13 +17,13 @@ const NAV_ITEMS = [
 ];
 
 export default function Sidebar() {
-  const { routerStatus } = useAppData();
+  const { routerStatus, currentUser } = useAppData();
   const providers = routerStatus?.providers || [];
 
   return (
     <aside className="w-full shrink-0 border-b border-line bg-sidebar lg:sticky lg:top-0 lg:h-screen lg:w-[244px] lg:self-start lg:overflow-hidden lg:border-b-0 lg:border-r xl:w-[252px]">
-      <div className="flex h-full flex-col gap-4 p-4 lg:gap-5">
-        <div className="space-y-5 overflow-x-hidden">
+      <div className="flex h-full flex-col gap-3 p-4 lg:gap-4">
+        <div className="space-y-4 overflow-x-hidden">
           <div className="mt-1 flex items-center gap-3">
             <img alt="PR Intel product icon" className="h-9 w-9 shrink-0 rounded-[12px] object-cover shadow-[0_10px_24px_rgba(37,99,235,0.28)]" src={productIcon} />
             <div>
@@ -31,6 +31,26 @@ export default function Sidebar() {
               <div className="mt-1.5 text-[12px] leading-none text-soft">Rocket.Chat</div>
             </div>
           </div>
+
+          {currentUser ? (
+            <div className="flex items-center gap-3 rounded-[12px] border border-line bg-panel px-3 py-2.5 shadow-sm">
+              {currentUser.avatarUrl ? (
+                <img
+                  alt={currentUser.username}
+                  className="h-9 w-9 shrink-0 rounded-full border border-line object-cover"
+                  src={currentUser.avatarUrl}
+                />
+              ) : (
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-line bg-active text-sm font-semibold text-accent">
+                  {(currentUser.username || 'GH').slice(0, 2).toUpperCase()}
+                </div>
+              )}
+              <div className="min-w-0">
+                <div className="truncate text-[12px] font-semibold text-ink">@{currentUser.username}</div>
+                <div className="truncate text-[12px] text-soft">Signed in with GitHub</div>
+              </div>
+            </div>
+          ) : null}
 
           <nav className="flex gap-1 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible">
             {NAV_ITEMS.map(({ to, label, icon: Icon }) => (
@@ -53,18 +73,18 @@ export default function Sidebar() {
           </nav>
         </div>
 
-        <div className="mt-auto shrink-0 pt-2 lg:pt-1">
-          <div className="rounded-[12px] border border-line bg-panel p-3.5 shadow-sm">
-            <div className="mb-2.5 text-[13px] font-medium tracking-wide text-soft">AI Providers</div>
-            <div className="space-y-2">
+        <div className="mt-auto shrink-0 pt-1">
+          <div className="rounded-[12px] border border-line bg-panel px-3 py-3 shadow-sm">
+            <div className="mb-2 text-[13px] font-medium tracking-wide text-soft">AI Providers</div>
+            <div className="space-y-1.5">
               {providers.length ? (
                 providers.map((provider) => (
-                  <div key={provider.id} className="flex items-center justify-between gap-2 text-[12px]">
+                  <div key={provider.id} className="flex items-center justify-between gap-2 text-[11px] leading-4">
                     <div className="flex items-center gap-2">
                       <span className="h-2 w-2 shrink-0 rounded-full bg-success" />
                       <span className="font-medium text-ink">{provider.name}</span>
                     </div>
-                    <span className="text-[12px] font-semibold text-success">healthy</span>
+                    <span className="shrink-0 text-[11px] font-semibold text-success">healthy</span>
                   </div>
                 ))
               ) : (

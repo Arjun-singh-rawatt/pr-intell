@@ -1,7 +1,7 @@
 import { isConfiguredEnv } from '../utils/env.js';
 
 const BASE = 'https://api.github.com';
-const REPO = 'RocketChat/Rocket.Chat';
+export const REPO = 'RocketChat/Rocket.Chat';
 
 function getHeaders() {
   const headers = {

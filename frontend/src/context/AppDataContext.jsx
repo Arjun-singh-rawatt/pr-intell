@@ -6,6 +6,7 @@ import {
   useMemo,
   useState,
 } from 'react';
+import { fetchMe } from '../api/auth.js';
 import { deleteBookmark, fetchBookmarks, saveBookmark } from '../api/bookmarks.js';
 import { fetchPRDetail, fetchPRs, fetchRouterStatus, summarizePR as summarizePRRequest } from '../api/prs.js';
 import { fetchUserSettings, updateUserSettings } from '../api/settings.js';
@@ -97,6 +98,8 @@ export function AppDataProvider({ children }) {
   const [routerStatusLoading, setRouterStatusLoading] = useState(false);
   const [savedBuckets, setSavedBuckets] = useState(readSavedState);
   const [settings, setSettings] = useState(readLocalSettings);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -143,6 +146,19 @@ export function AppDataProvider({ children }) {
       }
     })();
   }, [persistSavedBuckets, persistSettings]);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const user = await fetchMe();
+        setCurrentUser(user);
+      } catch {
+        setCurrentUser(null);
+      } finally {
+        setAuthLoading(false);
+      }
+    })();
+  }, []);
 
   const loadPage = useCallback(async (page, replace = false) => {
     const loadingSetter = replace ? setFeedLoading : setLoadingMore;
@@ -221,6 +237,17 @@ export function AppDataProvider({ children }) {
     },
     [refreshRouterStatus]
   );
+
+  const cacheSummary = useCallback((prNumber, summary) => {
+    setSummaryCache((current) => {
+      if (!summary) {
+        const next = { ...current };
+        delete next[prNumber];
+        return next;
+      }
+      return { ...current, [prNumber]: summary };
+    });
+  }, []);
 
   const isSaved = useCallback(
     (prNumber) => Boolean(savedBuckets.pr[String(prNumber)]),
@@ -420,9 +447,12 @@ export function AppDataProvider({ children }) {
       detailCache,
       detailLoading,
       getDetail,
+      currentUser,
+      authLoading,
       summaryCache,
       summaryLoading,
       summarize,
+      cacheSummary,
       routerStatus,
       routerStatusLoading,
       refreshRouterStatus,
@@ -447,10 +477,13 @@ export function AppDataProvider({ children }) {
       feedItems,
       feedLoading,
       getDetail,
+      currentUser,
+      authLoading,
       hasMore,
       isContributorSaved,
       isKbSaved,
       isSaved,
+      cacheSummary,
       loadMore,
       loadedPages,
       loadingMore,

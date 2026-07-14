@@ -185,7 +185,7 @@ export default function FeedPage() {
         </div>
       ) : (
         <EmptyState
-          description="Try a different filter or broaden the search. The backend feed itself is still connected and healthy."
+          description="Try a different filter."
           title="No PRs match the current view"
         />
       )}

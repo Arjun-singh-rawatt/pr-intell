@@ -160,6 +160,26 @@ export function ArrowDownUpIcon(props) {
   );
 }
 
+export function ArrowUpIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="m12 5-6 6" />
+      <path d="m12 5 6 6" />
+      <path d="M12 5v14" />
+    </Icon>
+  );
+}
+
+export function ArrowDownIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="m12 19-6-6" />
+      <path d="m12 19 6-6" />
+      <path d="M12 5v14" />
+    </Icon>
+  );
+}
+
 export function PlusIcon(props) {
   return (
     <Icon {...props}>
