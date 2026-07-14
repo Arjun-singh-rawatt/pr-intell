@@ -8,6 +8,8 @@ import {
   UserRoundIcon,
 } from '../components/common/Icons.jsx';
 import { Button, Panel, TextInput, Toggle } from '../components/common/UI.jsx';
+import ApiKeysPanel from '../components/settings/ApiKeysPanel.jsx';
+import { logout } from '../api/auth.js';
 
 export default function SettingsPage() {
   const { routerStatus, repository, feedItems, summaryCache, settings, saveSettings } = useAppData();
@@ -53,6 +55,11 @@ export default function SettingsPage() {
     const nextDarkMode = !draft.darkMode;
     setDraft((current) => ({ ...current, darkMode: nextDarkMode }));
     await saveSettings({ darkMode: nextDarkMode });
+  };
+
+  const handleSignOut = async () => {
+    await logout();
+    window.location.reload();
   };
 
   return (
@@ -185,9 +192,12 @@ export default function SettingsPage() {
         </div>
       </Panel>
 
+      <ApiKeysPanel />
+
       <div className="flex flex-col gap-4 border-t border-line pt-6 sm:flex-row sm:items-center sm:justify-between">
         <Button
           className="h-10 rounded-[12px] border border-red/30 bg-transparent px-4 text-red hover:bg-red/10 hover:text-red"
+          onClick={handleSignOut}
           type="button"
           variant="ghost"
         >
