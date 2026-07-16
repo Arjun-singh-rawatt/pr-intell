@@ -1,8 +1,7 @@
 import express from 'express';
-import jwt from 'jsonwebtoken';
 import Explanation from '../models/Explanation.js';
-import User from '../models/User.js';
-import { requireAuth, SESSION_COOKIE } from '../middleware/requireAuth.js';
+import { isDatabaseReady } from '../db.js';
+import { getAuthenticatedUser, requireAuth } from '../middleware/requireAuth.js';
 import { getPRDetail, REPO } from '../services/github.js';
 import { summarizePR } from '../services/ai.js';
 
@@ -70,15 +69,20 @@ function serializeExplanation(explanation, userId) {
 }
 
 async function getOptionalUser(req) {
-  const token = req.cookies?.[SESSION_COOKIE];
-  if (!token) return null;
-
   try {
-    const payload = jwt.verify(token, process.env.SESSION_SECRET);
-    return await User.findById(payload.userId);
+    return await getAuthenticatedUser(req);
   } catch {
     return null;
   }
+}
+
+function ensureDatabaseForWrites(res) {
+  if (!isDatabaseReady()) {
+    res.status(503).json({ error: 'Shared explanations require MongoDB.' });
+    return false;
+  }
+
+  return true;
 }
 
 router.get('/', async (req, res) => {
@@ -86,6 +90,10 @@ router.get('/', async (req, res) => {
     const prNumber = parsePrNumber(req.params.number);
     if (prNumber == null) {
       return res.status(400).json({ error: 'Invalid pull request number' });
+    }
+
+    if (!isDatabaseReady()) {
+      return res.json([]);
     }
 
     const user = await getOptionalUser(req);
@@ -101,6 +109,8 @@ router.get('/', async (req, res) => {
 
 router.post('/', requireAuth, async (req, res) => {
   try {
+    if (!ensureDatabaseForWrites(res)) return;
+
     const prNumber = parsePrNumber(req.params.number);
     if (prNumber == null) {
       return res.status(400).json({ error: 'Invalid pull request number' });
@@ -113,7 +123,7 @@ router.post('/', requireAuth, async (req, res) => {
     });
 
     if (existing) {
-      return res.status(409).json({ error: 'Current database is not capable enough.' });
+      return res.status(409).json({ error: 'You have already shared an explanation for this PR.' });
     }
 
     const { pr, files, comments } = await getPRDetail(prNumber);
@@ -139,7 +149,7 @@ router.post('/', requireAuth, async (req, res) => {
   } catch (err) {
     console.error(`[POST /api/prs/${req.params.number}/explanations]`, err.message);
     if (err?.code === 11000) {
-      return res.status(409).json({ error: 'Current database is not capable enough.' });
+      return res.status(409).json({ error: 'You have already shared an explanation for this PR.' });
     }
     res.status(500).json({ error: err.message });
   }
@@ -147,6 +157,8 @@ router.post('/', requireAuth, async (req, res) => {
 
 router.post('/:explanationId/rate', requireAuth, async (req, res) => {
   try {
+    if (!ensureDatabaseForWrites(res)) return;
+
     const prNumber = parsePrNumber(req.params.number);
     if (prNumber == null) {
       return res.status(400).json({ error: 'Invalid pull request number' });
@@ -193,6 +205,8 @@ router.post('/:explanationId/rate', requireAuth, async (req, res) => {
 
 router.delete('/:explanationId', requireAuth, async (req, res) => {
   try {
+    if (!ensureDatabaseForWrites(res)) return;
+
     const prNumber = parsePrNumber(req.params.number);
     if (prNumber == null) {
       return res.status(400).json({ error: 'Invalid pull request number' });

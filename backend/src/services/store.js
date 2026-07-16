@@ -5,6 +5,8 @@ import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = path.join(__dirname, '../../data');
 const STORE_PATH = path.join(DATA_DIR, 'store.json');
+const LOCAL_AUTH_USER_ID = 'local-dev-user';
+const LOCAL_GITHUB_ID = 'dev-github-user';
 
 export const DEFAULT_SETTINGS = {
   displayName: 'Alex Rivera',
@@ -13,9 +15,19 @@ export const DEFAULT_SETTINGS = {
   notifications: true,
 };
 
+export const DEFAULT_LOCAL_AUTH_USER = {
+  id: LOCAL_AUTH_USER_ID,
+  githubId: LOCAL_GITHUB_ID,
+  username: 'github-user',
+  displayName: 'GitHub User',
+  avatarUrl: '',
+  apiKeys: {},
+};
+
 export const DEFAULT_STORE = {
   settings: { ...DEFAULT_SETTINGS },
   bookmarks: { pr: {}, kb: {}, contributor: {} },
+  auth: { devUser: { ...DEFAULT_LOCAL_AUTH_USER } },
 };
 
 async function ensureStore() {
@@ -27,6 +39,38 @@ async function ensureStore() {
   }
 }
 
+function normalizeApiKeys(raw) {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    return {};
+  }
+
+  const next = {};
+  for (const [provider, value] of Object.entries(raw)) {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) continue;
+    if (!value.ciphertext || !value.iv || !value.authTag) continue;
+
+    next[provider] = {
+      ciphertext: String(value.ciphertext),
+      iv: String(value.iv),
+      authTag: String(value.authTag),
+      updatedAt: value.updatedAt ? new Date(value.updatedAt).toISOString() : new Date().toISOString(),
+    };
+  }
+
+  return next;
+}
+
+function normalizeLocalAuthUser(raw) {
+  return {
+    id: String(raw?.id || DEFAULT_LOCAL_AUTH_USER.id),
+    githubId: String(raw?.githubId || DEFAULT_LOCAL_AUTH_USER.githubId),
+    username: String(raw?.username || DEFAULT_LOCAL_AUTH_USER.username),
+    displayName: String(raw?.displayName || DEFAULT_LOCAL_AUTH_USER.displayName),
+    avatarUrl: String(raw?.avatarUrl || DEFAULT_LOCAL_AUTH_USER.avatarUrl),
+    apiKeys: normalizeApiKeys(raw?.apiKeys),
+  };
+}
+
 function normalizeStore(raw) {
   return {
     settings: { ...DEFAULT_SETTINGS, ...(raw.settings || {}) },
@@ -34,6 +78,9 @@ function normalizeStore(raw) {
       pr: { ...(raw.bookmarks?.pr || {}) },
       kb: { ...(raw.bookmarks?.kb || {}) },
       contributor: { ...(raw.bookmarks?.contributor || {}) },
+    },
+    auth: {
+      devUser: normalizeLocalAuthUser(raw.auth?.devUser),
     },
   };
 }
@@ -102,4 +149,28 @@ export async function removeBookmark(type, id) {
       bookmarks: { ...store.bookmarks, [type]: bucket },
     };
   });
+}
+
+export async function getLocalAuthUser() {
+  const store = await readStore();
+  return store.auth.devUser;
+}
+
+export async function updateLocalAuthUser(patch) {
+  const currentUser = await getLocalAuthUser();
+  const nextUser = normalizeLocalAuthUser({
+    ...currentUser,
+    ...patch,
+    apiKeys: patch?.apiKeys ?? currentUser.apiKeys,
+  });
+
+  const store = await writeStore((current) => ({
+    ...current,
+    auth: {
+      ...current.auth,
+      devUser: nextUser,
+    },
+  }));
+
+  return store.auth.devUser;
 }

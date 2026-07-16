@@ -1,6 +1,10 @@
 import express from 'express';
 import jwt from 'jsonwebtoken';
-import User from '../models/User.js';
+import {
+  findUserById,
+  getOrCreateGithubUser,
+  serializeUserForClient,
+} from '../services/authUsers.js';
 import { SESSION_COOKIE, SESSION_SECRET } from '../middleware/requireAuth.js';
 
 const router = express.Router();
@@ -25,19 +29,10 @@ router.get('/health', (_req, res) => {
 
 router.get('/github', async (req, res) => {
   const redirectTo = req.query.redirect || '/';
+  const user = await getOrCreateGithubUser();
+  const userId = user._id ? user._id.toString() : String(user.id);
 
-  let user = await User.findOne({ githubId: 'dev-github-user' });
-  if (!user) {
-    user = await User.create({
-      githubId: 'dev-github-user',
-      email: 'user@printel.local',
-      name: 'GitHub User',
-      apiKeys: {},
-    });
-  }
-
-  const token = createSessionToken(user._id);
-  setSessionCookie(res, token);
+  setSessionCookie(res, createSessionToken(userId));
   res.redirect(redirectTo);
 });
 
@@ -47,19 +42,14 @@ router.get('/me', async (req, res) => {
     if (!token) {
       return res.status(401).json({ error: 'Not authenticated' });
     }
+
     const payload = jwt.verify(token, SESSION_SECRET);
-    const user = await User.findById(payload.userId);
+    const user = await findUserById(payload.userId);
     if (!user) {
       return res.status(401).json({ error: 'User not found' });
     }
-    res.json({
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        apiKeys: user.apiKeys || {},
-      },
-    });
+
+    return res.json(serializeUserForClient(user));
   } catch (err) {
     return res.status(401).json({ error: 'Invalid or expired session' });
   }
