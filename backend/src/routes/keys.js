@@ -1,83 +1,86 @@
 import express from 'express';
 import { requireAuth } from '../middleware/requireAuth.js';
-import { encrypt, decrypt, maskKey } from '../utils/crypto.js';
+import {
+  deleteUserApiKey,
+  getUserApiKeys,
+  saveUserApiKey,
+  SUPPORTED_KEY_PROVIDERS,
+} from '../services/authUsers.js';
+import { decrypt, encrypt, maskKey } from '../utils/crypto.js';
 
 const router = express.Router();
-const PROVIDERS = ['gemini', 'groq', 'openrouter'];
 
-function assertProvider(provider, res) {
-  if (!PROVIDERS.includes(provider)) {
-    res.status(400).json({ error: `Unknown provider "${provider}". Must be one of: ${PROVIDERS.join(', ')}` });
-    return false;
-  }
-  return true;
+function buildStatus(apiKeys) {
+  return Object.fromEntries(
+    SUPPORTED_KEY_PROVIDERS.map((provider) => {
+      const record = apiKeys?.[provider];
+      if (!record?.ciphertext || !record?.iv || !record?.authTag) {
+        return [provider, { configured: false, masked: '' }];
+      }
+
+      let masked = '********';
+      try {
+        masked = maskKey(decrypt(record));
+      } catch {
+        masked = '********';
+      }
+
+      return [provider, { configured: true, masked }];
+    })
+  );
 }
 
-router.get('/', requireAuth, (req, res) => {
-  const status = {};
-  for (const provider of PROVIDERS) {
-    const record = req.user.apiKeys?.[provider];
-    status[provider] = record
-      ? {
-          configured: true,
-          updatedAt: record.updatedAt,
-          masked: record.masked || '••••••••',
-        }
-      : { configured: false };
+function validateProvider(provider) {
+  return SUPPORTED_KEY_PROVIDERS.includes(provider);
+}
+
+router.get('/', requireAuth, async (req, res) => {
+  try {
+    const apiKeys = await getUserApiKeys(req.user);
+    res.json(buildStatus(apiKeys));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
-  res.json(status);
 });
 
 router.post('/:provider', requireAuth, async (req, res) => {
   try {
     const { provider } = req.params;
-    if (!assertProvider(provider, res)) return;
+    const apiKey = String(req.body?.apiKey || '').trim();
 
-    const { apiKey } = req.body;
-    if (!apiKey || typeof apiKey !== 'string' || apiKey.trim().length < 8) {
-      return res.status(400).json({ error: 'apiKey is required and must be a valid key string' });
+    if (!validateProvider(provider)) {
+      return res.status(400).json({ error: 'Unsupported provider' });
+    }
+    if (!apiKey) {
+      return res.status(400).json({ error: 'apiKey is required' });
     }
 
-    const encrypted = encrypt(apiKey.trim());
-    req.user.apiKeys = req.user.apiKeys || {};
-    const masked = maskKey(apiKey.trim());
-    req.user.apiKeys[provider] = { ...encrypted, masked, updatedAt: new Date() };
-    await req.user.save();
-
-    res.json({
-      provider,
-      configured: true,
-      masked,
-      updatedAt: req.user.apiKeys[provider].updatedAt,
+    const updatedUser = await saveUserApiKey(req.user, provider, {
+      ...encrypt(apiKey),
+      updatedAt: new Date().toISOString(),
     });
+
+    const apiKeys = await getUserApiKeys(updatedUser);
+    res.status(201).json(buildStatus(apiKeys));
   } catch (err) {
-    console.error('Failed to store API key:', err.message);
-    res.status(500).json({ error: 'Failed to store API key' });
+    res.status(500).json({ error: err.message });
   }
 });
 
 router.delete('/:provider', requireAuth, async (req, res) => {
   try {
     const { provider } = req.params;
-    if (!assertProvider(provider, res)) return;
 
-    if (req.user.apiKeys?.[provider]) {
-      req.user.apiKeys[provider] = undefined;
-      await req.user.save();
+    if (!validateProvider(provider)) {
+      return res.status(400).json({ error: 'Unsupported provider' });
     }
-    res.json({ provider, configured: false });
+
+    const updatedUser = await deleteUserApiKey(req.user, provider);
+    const apiKeys = await getUserApiKeys(updatedUser);
+    res.json(buildStatus(apiKeys));
   } catch (err) {
-    console.error('Failed to delete API key:', err.message);
-    res.status(500).json({ error: 'Failed to delete API key' });
+    res.status(500).json({ error: err.message });
   }
 });
-
-// Internal helper for aiRouter.js to get a user's plaintext key at call time.
-// Never expose plaintext through an HTTP response.
-export async function getDecryptedKey(user, provider) {
-  const record = user?.apiKeys?.[provider];
-  if (!record) return null;
-  return decrypt(record);
-}
 
 export default router;

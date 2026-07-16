@@ -2,6 +2,7 @@ import express from 'express';
 import { getMergedPRs, getPRDetail } from '../services/github.js';
 import { summarizePR } from '../services/ai.js';
 import { getRouterStatus } from '../services/aiRouter.js';
+import explanationsRoutes from './explanations.js';
 
 const router = express.Router();
 
@@ -23,6 +24,8 @@ router.get('/router-status', (_req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+router.use('/:number/explanations', explanationsRoutes);
 
 router.get('/:number', async (req, res) => {
   try {
