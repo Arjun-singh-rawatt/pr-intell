@@ -32,7 +32,7 @@ export default function Sidebar() {
             </div>
           </div>
 
-          {currentUser ? (
+          {currentUser && currentUser.username ? (
             <div className="flex items-center gap-3 rounded-[12px] border border-line bg-panel px-3 py-2.5 shadow-sm">
               {currentUser.avatarUrl ? (
                 <img
@@ -42,7 +42,7 @@ export default function Sidebar() {
                 />
               ) : (
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-line bg-active text-sm font-semibold text-accent">
-                  {(currentUser.username || 'GH').slice(0, 2).toUpperCase()}
+                  {currentUser.username.slice(0, 2).toUpperCase()}
                 </div>
               )}
               <div className="min-w-0">
@@ -50,7 +50,17 @@ export default function Sidebar() {
                 <div className="truncate text-[12px] text-soft">Signed in with GitHub</div>
               </div>
             </div>
-          ) : null}
+          ) : (
+            <div className="flex items-center gap-3 rounded-[12px] border border-line bg-panel px-3 py-2.5 shadow-sm">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-line bg-active text-sm font-semibold text-accent">
+                GH
+              </div>
+              <div className="min-w-0">
+                <a href="/api/auth/github" className="truncate text-[12px] font-semibold text-accent hover:underline">Sign in with GitHub</a>
+                <div className="truncate text-[12px] text-soft">Not signed in</div>
+              </div>
+            </div>
+          )}
 
           <nav className="flex gap-1 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible">
             {NAV_ITEMS.map(({ to, label, icon: Icon }) => (

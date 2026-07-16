@@ -419,7 +419,7 @@ export default function SearchPage() {
         </div>
 
         <div
-          className="relative w-full xl:min-w-[280px] xl:shrink-0 xl:w-[var(--search-sidebar-width)]"
+          className="relative w-full xl:min-w-[280px] xl:shrink-0 xl:w-[var(--search-sidebar-width)] xl:sticky xl:top-6 xl:max-h-[calc(100vh-3rem)] xl:overflow-y-auto pb-6"
           style={{ '--search-sidebar-width': `${sidebarWidth}px` }}
         >
           <button

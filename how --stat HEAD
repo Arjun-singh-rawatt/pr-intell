@@ -1,0 +1,14 @@
+* [33mad697cb[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mediting-readme[m[33m)[m adding feature p-1
+[31m|[m *   [33m4902f27[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m Merge pull request #2 from Arjun-singh-rawatt/editing-readme
+[31m|[m [32m|[m[31m\[m  
+[31m|[m [32m|[m[31m/[m  
+[31m|[m[31m/[m[32m|[m   
+* [32m|[m [33m228d1dc[m[33m ([m[1;31morigin/editing-readme[m[33m)[m Merge main into editing-readme, keep latest changes
+[34m|[m[32m\[m[32m|[m 
+[34m|[m * [33m8816ffa[m[33m ([m[1;32mmain[m[33m)[m fixing and feature adding
+* [35m|[m [33mfbad8e5[m Add authentication backend p-1
+* [35m|[m [33me8dc5e0[m Add API keys support P-1
+[35m|[m[35m/[m  
+[35m|[m * [33m9f04e53[m[33m ([m[1;31morigin/feature-and-upgrading[m[33m)[m adding db_mongo
+[35m|[m[35m/[m  
+* [33m6247f7d[m initial commit
