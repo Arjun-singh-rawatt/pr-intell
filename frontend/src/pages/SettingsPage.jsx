@@ -12,7 +12,7 @@ import ApiKeysPanel from '../components/settings/ApiKeysPanel.jsx';
 import { logout } from '../api/auth.js';
 
 export default function SettingsPage() {
-  const { routerStatus, repository, feedItems, summaryCache, settings, saveSettings } = useAppData();
+  const { routerStatus, repository, feedItems, summaryCache, settings, saveSettings, currentUser } = useAppData();
   const [draft, setDraft] = useState(settings);
   const [savedAt, setSavedAt] = useState('');
 
@@ -74,14 +74,12 @@ export default function SettingsPage() {
       <Panel className="rounded-[12px] border border-line bg-panel p-6 shadow-sm">
         <div className="grid gap-6 lg:grid-cols-[160px,1fr]">
           <div className="flex flex-col items-center">
-            <div className="relative flex h-[112px] w-[112px] items-center justify-center rounded-[8px] border border-line bg-panel2 shadow-sm">
-              <UserRoundIcon className="h-12 w-12 text-muted" />
-              <button
-                className="absolute -bottom-2 -right-2 rounded-full border border-line bg-panel p-2 shadow-sm transition-colors hover:bg-panel2"
-                type="button"
-              >
-                <CameraIcon className="h-4 w-4 text-accent" />
-              </button>
+            <div className="relative flex h-[112px] w-[112px] items-center justify-center rounded-[8px] border border-line bg-panel2 shadow-sm overflow-hidden">
+              {currentUser?.avatarUrl ? (
+                <img src={currentUser.avatarUrl} alt="Avatar" className="h-full w-full object-cover" />
+              ) : (
+                <UserRoundIcon className="h-12 w-12 text-muted" />
+              )}
             </div>
             <span className="mt-4 block text-center text-[11px] font-semibold uppercase tracking-wider text-soft">
               AVATAR

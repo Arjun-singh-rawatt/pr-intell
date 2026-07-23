@@ -28,12 +28,65 @@ router.get('/health', (_req, res) => {
 });
 
 router.get('/github', async (req, res) => {
-  const redirectTo = req.query.redirect || '/';
-  const user = await getOrCreateGithubUser();
-  const userId = user._id ? user._id.toString() : String(user.id);
+  if (!process.env.GITHUB_CLIENT_ID) {
+    console.warn('GITHUB_CLIENT_ID not found, falling back to local dev user.');
+    const user = await getOrCreateGithubUser();
+    const userId = user._id ? user._id.toString() : String(user.id);
+    setSessionCookie(res, createSessionToken(userId));
+    return res.redirect(process.env.CLIENT_URL || 'http://localhost:3001/');
+  }
+  const redirectUri = process.env.GITHUB_CALLBACK_URL || 'http://localhost:5000/api/auth/github/callback';
+  const url = `https://github.com/login/oauth/authorize?client_id=${process.env.GITHUB_CLIENT_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=read:user`;
+  res.redirect(url);
+});
 
-  setSessionCookie(res, createSessionToken(userId));
-  res.redirect(redirectTo);
+router.get('/github/callback', async (req, res) => {
+  const code = req.query.code;
+  if (!code) {
+    return res.status(400).send('No code provided');
+  }
+  try {
+    const tokenResponse = await fetch('https://github.com/login/oauth/access_token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify({
+        client_id: process.env.GITHUB_CLIENT_ID,
+        client_secret: process.env.GITHUB_CLIENT_SECRET,
+        code,
+      }),
+    });
+    const tokenData = await tokenResponse.json();
+    const accessToken = tokenData.access_token;
+
+    if (!accessToken) {
+      console.error('GitHub OAuth error:', tokenData);
+      return res.status(401).send('Failed to obtain access token');
+    }
+
+    const userResponse = await fetch('https://api.github.com/user', {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+    const githubUser = await userResponse.json();
+
+    const user = await getOrCreateGithubUser(
+      githubUser.id,
+      githubUser.login,
+      githubUser.avatar_url,
+      githubUser.name || githubUser.login
+    );
+    const userId = user._id ? user._id.toString() : String(user.id);
+
+    setSessionCookie(res, createSessionToken(userId));
+    res.redirect(process.env.CLIENT_URL || 'http://localhost:3001/');
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Internal Server Error');
+  }
 });
 
 router.get('/me', async (req, res) => {

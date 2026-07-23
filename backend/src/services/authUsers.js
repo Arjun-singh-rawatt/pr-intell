@@ -36,22 +36,32 @@ export async function findUserById(userId) {
   return user.id === String(userId) ? user : null;
 }
 
-export async function getOrCreateGithubUser() {
+export async function getOrCreateGithubUser(githubId = DEV_GITHUB_ID, username = 'github-user', avatarUrl = '', displayName = 'GitHub User') {
   if (isDatabaseReady()) {
-    let user = await User.findOne({ githubId: DEV_GITHUB_ID });
+    let user = await User.findOne({ githubId });
     if (!user) {
       user = await User.create({
-        githubId: DEV_GITHUB_ID,
-        username: 'github-user',
-        displayName: 'GitHub User',
-        avatarUrl: '',
+        githubId,
+        username,
+        displayName,
+        avatarUrl,
         apiKeys: {},
       });
+    } else {
+      user.avatarUrl = avatarUrl;
+      user.username = username;
+      user.displayName = displayName;
+      await user.save();
     }
     return user;
   }
 
-  return getLocalAuthUser();
+  return updateLocalAuthUser({
+    githubId: String(githubId),
+    username,
+    displayName,
+    avatarUrl
+  });
 }
 
 export async function getUserApiKeys(user) {
