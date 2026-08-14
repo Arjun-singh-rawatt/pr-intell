@@ -30,7 +30,29 @@ router.get('/health', (_req, res) => {
 router.get('/github', async (req, res) => {
   if (!process.env.GITHUB_CLIENT_ID) {
     console.warn('GITHUB_CLIENT_ID not found, falling back to local dev user.');
-    const user = await getOrCreateGithubUser();
+    let githubId = 'dev-github-user';
+    let username = 'github-user';
+    let avatarUrl = '';
+    let displayName = 'GitHub User';
+
+    if (process.env.GITHUB_TOKEN) {
+      try {
+        const userRes = await fetch('https://api.github.com/user', {
+          headers: { Authorization: `Bearer ${process.env.GITHUB_TOKEN}` }
+        });
+        if (userRes.ok) {
+          const ghUser = await userRes.json();
+          githubId = ghUser.id || githubId;
+          username = ghUser.login || username;
+          avatarUrl = ghUser.avatar_url || avatarUrl;
+          displayName = ghUser.name || ghUser.login || displayName;
+        }
+      } catch (err) {
+        console.error('Failed to fetch github user with token', err);
+      }
+    }
+
+    const user = await getOrCreateGithubUser(githubId, username, avatarUrl, displayName);
     const userId = user._id ? user._id.toString() : String(user.id);
     setSessionCookie(res, createSessionToken(userId));
     return res.redirect(process.env.CLIENT_URL || 'http://localhost:3001/');

@@ -250,8 +250,17 @@ function SharedExplanationsSection({
       ) : null}
 
       {!loading && !explanations.length ? (
-        <Panel className="border-dashed border-white/10 bg-black/10 p-5 text-sm text-soft">
-          No shared explanations yet. Share the first explanation for this PR.
+        <Panel className="flex items-center justify-between border-dashed border-white/10 bg-black/10 p-5 text-sm text-soft">
+          <span>No shared explanations yet. Share the first explanation for this PR.</span>
+          <Button
+            disabled={!isSignedIn || authLoading || generating || hasSharedExplanation}
+            onClick={onGenerate}
+            size="sm"
+            type="button"
+          >
+            <SparklesIcon className="h-4 w-4" />
+            Explain with AI
+          </Button>
         </Panel>
       ) : null}
 
@@ -488,7 +497,11 @@ export default function PRDetailDrawer({ prNumber, onClose }) {
                   <span className="font-mono text-xs text-soft">{detail.pr.user.login}</span>
                   <span className="font-mono text-xs text-soft">merged {formatAbsoluteDate(detail.pr.merged_at)}</span>
                 </div>
-                <h2 className="mt-3 break-words text-2xl font-bold tracking-tight text-ink">{detail.pr.title}</h2>
+                <h2 className="mt-3 break-words text-2xl font-bold tracking-tight text-ink">
+                  <a href={detail.pr.html_url} target="_blank" rel="noreferrer" className="hover:underline">
+                    {detail.pr.title}
+                  </a>
+                </h2>
                 <div className="mt-4 flex flex-wrap items-center gap-4 text-xs text-soft">
                   <span className="flex items-center gap-1.5">
                     <FileDiffIcon className="h-3.5 w-3.5" />
@@ -533,12 +546,6 @@ export default function PRDetailDrawer({ prNumber, onClose }) {
                 shareSuccess={shareSuccess}
               />
 
-              {detail.pr.body ? (
-                <Panel className="p-4">
-                  <p className="font-mono text-[11px] uppercase tracking-[0.24em] text-soft">PR description</p>
-                  <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-6 text-soft">{detail.pr.body}</p>
-                </Panel>
-              ) : null}
 
               <Panel className="p-4">
                 <div className="flex items-center justify-between">
