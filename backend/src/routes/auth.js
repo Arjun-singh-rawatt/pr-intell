@@ -5,12 +5,12 @@ import {
   getOrCreateGithubUser,
   serializeUserForClient,
 } from '../services/authUsers.js';
-import { SESSION_COOKIE, SESSION_SECRET } from '../middleware/requireAuth.js';
+import { SESSION_COOKIE, getSessionSecret } from '../middleware/requireAuth.js';
 
 const router = express.Router();
 
 function createSessionToken(userId) {
-  return jwt.sign({ userId }, SESSION_SECRET, { expiresIn: '7d' });
+  return jwt.sign({ userId }, getSessionSecret(), { expiresIn: '7d' });
 }
 
 function setSessionCookie(res, token) {
@@ -118,7 +118,7 @@ router.get('/me', async (req, res) => {
       return res.status(401).json({ error: 'Not authenticated' });
     }
 
-    const payload = jwt.verify(token, SESSION_SECRET);
+    const payload = jwt.verify(token, getSessionSecret());
     const user = await findUserById(payload.userId);
     if (!user) {
       return res.status(401).json({ error: 'User not found' });

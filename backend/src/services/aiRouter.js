@@ -239,8 +239,11 @@ function markExhausted(id) {
   console.warn(`[router] ${id} exhausted - cooling down 1hr`);
 }
 
+let routerCursor = 0;
+
 export function getRouterStatus() {
   return {
+    currentIndex: routerCursor,
     providers: FREE_PROVIDERS.map((p) => ({
       id: p.id,
       name: p.name,
@@ -259,8 +262,18 @@ export async function routePrompt(prompt) {
     (p) => isConfiguredEnv(p.envKey) && !isExhausted(p.id)
   );
   let lastError = null;
+  let toTry = [];
 
-  for (const provider of available) {
+  if (available.length > 0) {
+    const startIndex = routerCursor % available.length;
+    routerCursor = (routerCursor + 1) % available.length;
+    toTry = [
+      ...available.slice(startIndex),
+      ...available.slice(0, startIndex)
+    ];
+  }
+
+  for (const provider of toTry) {
     const apiKey = process.env[provider.envKey]?.trim();
     try {
       console.log(`[router] Trying ${provider.name}`);

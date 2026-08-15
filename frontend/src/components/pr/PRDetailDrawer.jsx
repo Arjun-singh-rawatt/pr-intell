@@ -5,6 +5,7 @@ import {
   generateExplanation,
   rateExplanation,
 } from '../../api/explanations.js';
+import { summarizePR } from '../../api/prs.js';
 import { useAppData } from '../../context/AppDataContext.jsx';
 import { formatAbsoluteDate } from '../../utils/format.js';
 import { getTypeMeta, inferPRType } from '../../utils/pr.js';
@@ -59,6 +60,18 @@ function sortExplanations(items) {
   });
 }
 
+function buildExplanationContent(summary) {
+  const sections = [
+    summary?.oneLiner?.trim(),
+    summary?.summary ? `Summary\n${summary.summary.trim()}` : '',
+    summary?.problemSolved ? `Problem Solved\n${summary.problemSolved.trim()}` : '',
+    summary?.technicalDetails ? `Technical Details\n${summary.technicalDetails.trim()}` : '',
+    summary?.whatToLearn ? `What To Learn\n${summary.whatToLearn.trim()}` : '',
+    summary?.similarContribution ? `Similar Contribution\n${summary.similarContribution.trim()}` : '',
+  ];
+  return sections.filter(Boolean).join('\n\n');
+}
+
 function explanationToSummaryPreview(explanation) {
   if (!explanation) return null;
 
@@ -82,26 +95,9 @@ function ExplanationCard({
   deletePendingId,
   onRate,
   onDelete,
+  onGenerate,
+  generating,
 }) {
-  const [ratingInput, setRatingInput] = useState(
-    explanation.currentUserRating ? String(explanation.currentUserRating) : ''
-  );
-  const isOwner = Boolean(currentUserId && explanation.generatedBy?.userId === currentUserId);
-  const rateDisabled = authLoading || !currentUserId || ratePendingId === explanation.id;
-  const deleteDisabled = deletePendingId === explanation.id;
-
-  useEffect(() => {
-    setRatingInput(explanation.currentUserRating ? String(explanation.currentUserRating) : '');
-  }, [explanation.currentUserRating]);
-
-  const handleRateSubmit = () => {
-    const parsed = Number.parseInt(ratingInput, 10);
-    if (!Number.isInteger(parsed) || parsed < 1 || parsed > 10) {
-      return;
-    }
-    onRate(explanation.id, parsed);
-  };
-
   return (
     <Panel className="p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -115,62 +111,20 @@ function ExplanationCard({
               {formatAbsoluteDate(explanation.createdAt)}
             </span>
           </div>
-          <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
-            <div>
-              <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-soft">Rating</span>
-              <div className="mt-1 font-semibold text-ink">{formatScore(explanation.score)} / 10</div>
-            </div>
-            <div>
-              <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-soft">Raters</span>
-              <div className="mt-1 font-semibold text-ink">{explanation.ratingCount || 0}</div>
-            </div>
-          </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <TextInput
-            className="w-[96px]"
-            disabled={rateDisabled}
-            inputMode="numeric"
-            max="10"
-            min="1"
-            onChange={(event) => setRatingInput(event.target.value)}
-            placeholder="1-10"
-            type="number"
-            value={ratingInput}
-          />
           <Button
-            disabled={
-              rateDisabled
-              || !ratingInput
-              || Number.parseInt(ratingInput, 10) < 1
-              || Number.parseInt(ratingInput, 10) > 10
-            }
-            onClick={handleRateSubmit}
+            disabled={generating}
+            onClick={onGenerate}
             size="sm"
             type="button"
             variant="outline"
           >
-            {ratePendingId === explanation.id ? 'Saving...' : 'Rate /10'}
+            <SparklesIcon className="h-4 w-4" />
+            {generating ? 'Explaining...' : 'Explain again'}
           </Button>
-          {isOwner ? (
-            <Button
-              className="text-red"
-              disabled={deleteDisabled}
-              onClick={() => onDelete(explanation.id)}
-              size="sm"
-              type="button"
-              variant="ghost"
-            >
-              <TrashIcon className="h-4 w-4" />
-              Delete
-            </Button>
-          ) : null}
         </div>
       </div>
-
-      {explanation.currentUserRating ? (
-        <div className="mt-3 text-xs text-soft">Your rating: {explanation.currentUserRating} / 10</div>
-      ) : null}
 
       <div className="mt-4 whitespace-pre-wrap break-words text-sm leading-6 text-soft">
         {explanation.content}
@@ -195,6 +149,7 @@ function SharedExplanationsSection({
   ratePendingId,
 }) {
   const isSignedIn = Boolean(currentUser?.id);
+  const [showUnderProgress, setShowUnderProgress] = useState(false);
 
   return (
     <div className="space-y-4">
@@ -203,12 +158,14 @@ function SharedExplanationsSection({
           <div>
             <div className="text-sm font-semibold text-accent">Shared AI Explanations</div>
             <p className="mt-1 text-sm leading-6 text-soft">
-              Shared across everyone reviewing this pull request. Rate each explanation from 1 to 10.
+              {showUnderProgress 
+                ? 'feature under progress.' 
+                : 'Shared across everyone reviewing this pull request. Rate each explanation from 1 to 10.'}
             </p>
           </div>
           <Button
             disabled={!isSignedIn || authLoading || generating || hasSharedExplanation}
-            onClick={onGenerate}
+            onClick={() => setShowUnderProgress(true)}
             size="sm"
             type="button"
           >
@@ -226,12 +183,6 @@ function SharedExplanationsSection({
           </div>
         ) : null}
       </Panel>
-
-      {shareSuccess ? (
-        <Panel className="border-success/30 bg-success/10 p-4 text-sm text-success">
-          Shared successfully.
-        </Panel>
-      ) : null}
 
       {error ? (
         <Panel className="border-warn/30 bg-warn/10 p-4 text-sm text-warn">
@@ -274,6 +225,8 @@ function SharedExplanationsSection({
           onDelete={onDelete}
           onRate={onRate}
           ratePendingId={ratePendingId}
+          onGenerate={onGenerate}
+          generating={generating}
         />
       ))}
     </div>
@@ -300,7 +253,6 @@ export default function PRDetailDrawer({ prNumber, onClose }) {
   const [explanations, setExplanations] = useState([]);
   const [explanationsLoading, setExplanationsLoading] = useState(false);
   const [explanationsError, setExplanationsError] = useState(null);
-  const [shareSuccess, setShareSuccess] = useState(false);
   const [generatingExplanation, setGeneratingExplanation] = useState(false);
   const [ratePendingId, setRatePendingId] = useState('');
   const [deletePendingId, setDeletePendingId] = useState('');
@@ -338,7 +290,6 @@ export default function PRDetailDrawer({ prNumber, onClose }) {
 
     setDetailError(null);
     setExplanationsError(null);
-    setShareSuccess(false);
     loadExplanations(prNumber, true);
 
     getDetail(prNumber).catch((error) => {
@@ -363,29 +314,27 @@ export default function PRDetailDrawer({ prNumber, onClose }) {
   }, [cacheSummary, explanations, explanationsLoading, prNumber]);
 
   const handleGenerateExplanation = async () => {
-    if (!prNumber || !currentUser?.id || generatingExplanation) return;
+    if (!prNumber || generatingExplanation) return;
 
     setGeneratingExplanation(true);
     setExplanationsError(null);
-    setShareSuccess(false);
 
     try {
-      const created = await generateExplanation(prNumber);
-      setExplanations((current) => sortExplanations([created, ...current]));
-      setShareSuccess(true);
+      const summaryData = await summarizePR(prNumber);
+      const localExplanation = {
+        id: 'local-' + Date.now(),
+        prNumber,
+        content: buildExplanationContent(summaryData),
+        generatedBy: { userId: currentUser?.id, username: currentUser?.name || currentUser?.username || 'You (Local)' },
+        provider: summaryData._provider || 'AI',
+        score: summaryData.judgeScore || 0,
+        ratingCount: 0,
+        createdAt: new Date().toISOString(),
+      };
+      setExplanations((current) => sortExplanations([localExplanation, ...current]));
       await refreshRouterStatus();
     } catch (error) {
-      if (error.response?.status === 409 && hasSharedExplanation) {
-        setExplanationsError(null);
-        setShareSuccess(true);
-      } else {
-      const status = error.response?.status;
-        if (status && status >= 500) {
-          await refreshRouterStatus();
-        } else {
-          setExplanationsError(error.response?.data?.error || error.message);
-        }
-      }
+      setExplanationsError(error.response?.data?.error || error.message);
     } finally {
       setGeneratingExplanation(false);
     }
@@ -543,7 +492,6 @@ export default function PRDetailDrawer({ prNumber, onClose }) {
                 onGenerate={handleGenerateExplanation}
                 onRate={handleRate}
                 ratePendingId={ratePendingId}
-                shareSuccess={shareSuccess}
               />
 
 
