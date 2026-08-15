@@ -1,18 +1,22 @@
 import jwt from 'jsonwebtoken';
 import { findUserById } from '../services/authUsers.js';
 
-export const SESSION_COOKIE = 'pr_intel_session';
-export const SESSION_SECRET = process.env.SESSION_SECRET?.trim() || 'pr_intel_dev_secret';
-
-if (!process.env.SESSION_SECRET) {
-  console.warn('WARNING: SESSION_SECRET is not set; using a development fallback secret.');
+export function getSessionSecret() {
+  const secret = process.env.SESSION_SECRET?.trim();
+  if (!secret) {
+    console.warn('WARNING: SESSION_SECRET is not set; using a development fallback secret.');
+    return 'pr_intel_dev_secret';
+  }
+  return secret;
 }
+
+export const SESSION_COOKIE = 'pr_intel_session';
 
 export async function getAuthenticatedUser(req) {
   const token = req.cookies?.[SESSION_COOKIE];
   if (!token) return null;
 
-  const payload = jwt.verify(token, SESSION_SECRET);
+  const payload = jwt.verify(token, getSessionSecret());
   return findUserById(payload.userId);
 }
 

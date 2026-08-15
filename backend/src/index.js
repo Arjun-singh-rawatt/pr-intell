@@ -63,14 +63,16 @@ async function start() {
 
   app.listen(PORT, () => {
     const github = isConfiguredEnv('GITHUB_TOKEN') ? 'token set' : 'anonymous (60 req/hr)';
-    const gemini = isConfiguredEnv('GEMINI_API_KEY')
-      ? '✓ Gemini Flash'
-      : '✗ missing — get free key at aistudio.google.com';
+    const gemini = isConfiguredEnv('GEMINI_API_KEY') ? '✓ configured' : '✗ missing';
+    const groq = isConfiguredEnv('GROQ_API_KEY') ? '✓ configured' : '✗ missing';
+    const openrouter = isConfiguredEnv('OPENROUTER_API_KEY') ? '✓ configured' : '✗ missing';
 
     console.log(`\n🚀 PR Intel → http://localhost:${PORT}`);
-    console.log(`   GitHub  → ${github}`);
-    console.log(`   Gemini  → ${gemini}`);
-    console.log(`   KB      → ${indexed} chunks in BM25 index`);
+    console.log(`   GitHub      → ${github}`);
+    console.log(`   Gemini      → ${gemini}`);
+    console.log(`   Groq        → ${groq}`);
+    console.log(`   OpenRouter  → ${openrouter}`);
+    console.log(`   KB          → ${indexed} chunks in BM25 index`);
 
     if (indexed === 0) {
       console.log('\n   No knowledge base yet.');

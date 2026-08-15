@@ -110,8 +110,14 @@ export default function PRCard({
             {summary.summary || summary.oneLiner}
           </div>
         ) : (
-          <div className="mt-2.5 rounded-[8px] border border-dashed border-line bg-panel p-3 text-[13px] text-soft">
-            Open this PR to generate an explanation from the existing AI backend.
+          <div className="mt-2.5 rounded-[8px] border border-dashed border-line bg-panel p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <span className="text-[13px] text-soft">
+              No AI summary generated yet.
+            </span>
+            <Button size="sm" onClick={(e) => { e.stopPropagation(); onOpen(pr.number); }} type="button">
+              <SparklesIcon className="h-4 w-4" />
+              AI Explain
+            </Button>
           </div>
         )}
       </div>

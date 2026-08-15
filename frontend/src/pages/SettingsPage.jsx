@@ -12,7 +12,7 @@ import ApiKeysPanel from '../components/settings/ApiKeysPanel.jsx';
 import { logout } from '../api/auth.js';
 
 export default function SettingsPage() {
-  const { routerStatus, repository, feedItems, summaryCache, settings, saveSettings } = useAppData();
+  const { routerStatus, repository, feedItems, summaryCache, settings, saveSettings, currentUser } = useAppData();
   const [draft, setDraft] = useState(settings);
   const [savedAt, setSavedAt] = useState('');
 
@@ -74,14 +74,12 @@ export default function SettingsPage() {
       <Panel className="rounded-[12px] border border-line bg-panel p-6 shadow-sm">
         <div className="grid gap-6 lg:grid-cols-[160px,1fr]">
           <div className="flex flex-col items-center">
-            <div className="relative flex h-[112px] w-[112px] items-center justify-center rounded-[8px] border border-line bg-panel2 shadow-sm">
-              <UserRoundIcon className="h-12 w-12 text-muted" />
-              <button
-                className="absolute -bottom-2 -right-2 rounded-full border border-line bg-panel p-2 shadow-sm transition-colors hover:bg-panel2"
-                type="button"
-              >
-                <CameraIcon className="h-4 w-4 text-accent" />
-              </button>
+            <div className="relative flex h-[112px] w-[112px] items-center justify-center rounded-[8px] border border-line bg-panel2 shadow-sm overflow-hidden">
+              {currentUser?.avatarUrl ? (
+                <img src={currentUser.avatarUrl} alt="Avatar" className="h-full w-full object-cover" />
+              ) : (
+                <UserRoundIcon className="h-12 w-12 text-muted" />
+              )}
             </div>
             <span className="mt-4 block text-center text-[11px] font-semibold uppercase tracking-wider text-soft">
               AVATAR
@@ -131,22 +129,7 @@ export default function SettingsPage() {
           </button>
         </Panel>
 
-        <Panel className="flex items-center justify-between rounded-[12px] border border-line bg-panel p-4 shadow-sm">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[8px] bg-active">
-              <BellIcon className="h-5 w-5 text-accent" />
-            </div>
-            <div>
-              <h3 className="text-[16px] font-medium text-ink">Notifications</h3>
-              <p className="mt-0.5 text-[11px] font-semibold uppercase tracking-wider text-soft">
-                Push alerts for contributors
-              </p>
-            </div>
-          </div>
-          <button onClick={() => updateField('notifications', !draft.notifications)} type="button">
-            <Toggle checked={draft.notifications} />
-          </button>
-        </Panel>
+        <div>{/* Empty space to preserve grid layout for Appearance panel */}</div>
       </div>
 
       <Panel className="space-y-5 rounded-[12px] border border-line bg-panel p-6 shadow-sm">
@@ -195,14 +178,25 @@ export default function SettingsPage() {
       <ApiKeysPanel />
 
       <div className="flex flex-col gap-4 border-t border-line pt-6 sm:flex-row sm:items-center sm:justify-between">
-        <Button
-          className="h-10 rounded-[12px] border border-red/30 bg-transparent px-4 text-red hover:bg-red/10 hover:text-red"
-          onClick={handleSignOut}
-          type="button"
-          variant="ghost"
-        >
-          Sign Out
-        </Button>
+        {currentUser ? (
+          <Button
+            className="h-10 rounded-[12px] border border-red/30 bg-transparent px-4 text-red hover:bg-red/10 hover:text-red"
+            onClick={handleSignOut}
+            type="button"
+            variant="ghost"
+          >
+            Sign Out
+          </Button>
+        ) : (
+          <Button
+            className="h-10 rounded-[12px] border border-accent/30 bg-transparent px-4 text-accent hover:bg-accent/10 hover:text-accent"
+            onClick={() => { window.location.href = '/api/auth/github'; }}
+            type="button"
+            variant="ghost"
+          >
+            Sign In with GitHub
+          </Button>
+        )}
 
         <div className="flex flex-wrap items-center gap-3">
           {savedAt ? (
@@ -220,9 +214,6 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      <p className="pt-4 text-center font-mono text-[11px] uppercase tracking-[0.18em] text-muted">
-        preferences sync to backend/data/store.json (local dev store)
-      </p>
     </div>
   );
 }
